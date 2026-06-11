@@ -1,0 +1,53 @@
+======================================================================
+  HISTORICO DE CONVERSOES - CRI0148
+  TOTVS DATASUL -> EXCEL
+  Ultima atualizacao: 09/06/2026 14:31
+======================================================================
+
+DATA/HORA              ARQUIVO                                       REGISTROS   
+----------------------------------------------------------------------
+09/06/2026 11:32       CRI0148 - 01-05_CONVERTIDO.xlsx               1.424 viagens
+09/06/2026 07:46       CRI0148- 2025_CONVERTIDO.xlsx                 4.080 viagens
+09/06/2026 07:51       CRI0148_2025_2026_COMBINADO.xlsx              2 abas separadas
+09/06/2026 07:53       CRI0148_2025_2026_UNIFICADO.xlsx              1 unica aba 
+09/06/2026 08:05       CRI0148_PowerBI.xlsx                          5.504 registros
+
+======================================================================
+  DETALHAMENTO DAS OPERACOES
+======================================================================
+
+  [09/06/2026 11:32]
+  Arquivo: CRI0148 - 01-05_CONVERTIDO.xlsx
+  Pasta: viviane
+  Descricao: Conversao CRI0148 2026 (ajustada) - 1.424 viagens
+  Tamanho: 178.0 KB
+  Status: OK
+
+  [09/06/2026 07:46]
+  Arquivo: CRI0148- 2025_CONVERTIDO.xlsx
+  Pasta: viviane
+  Descricao: Conversao CRI0148 2025 - 4.080 viagens
+  Tamanho: 429.5 KB
+  Status: OK
+
+  [09/06/2026 07:51]
+  Arquivo: CRI0148_2025_2026_COMBINADO.xlsx
+  Pasta: Desktop
+  Descricao: Arquivo combinado 2025+2026 - 2 abas separadas
+  Tamanho: 575.9 KB
+  Status: OK
+
+  [09/06/2026 07:53]
+  Arquivo: CRI0148_2025_2026_UNIFICADO.xlsx
+  Pasta: Desktop
+  Descricao: Arquivo unificado 2025+2026 - 1 unica aba
+  Tamanho: 592.7 KB
+  Status: OK
+
+  [09/06/2026 08:05]
+  Arquivo: CRI0148_PowerBI.xlsx
+  Pasta: Desktop
+  Descricao: Arquivo otimizado para Power BI - 5.504 registros
+  Tamanho: 697.0 KB
+  Status: OK
+
