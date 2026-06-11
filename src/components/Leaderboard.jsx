@@ -11,7 +11,7 @@ function Leaderboard({ users, predictions, matches, matchResults, currentUser })
     ...(matchResults[m.id] || {}),
   })));
 
-  const allWithPoints = users.map(u => [u.id, userPoints[u.id] || 0]);
+  const allWithPoints = users.map(u => [u.name, userPoints[u.name] || 0]);
   const sorted = allWithPoints
     .sort(([, a], [, b]) => b - a);
 
@@ -24,8 +24,8 @@ function Leaderboard({ users, predictions, matches, matchResults, currentUser })
     return null;
   };
 
-  const getUserStats = (userId) => {
-    const userPreds = predictions[userId] || [];
+  const getUserStats = (userName) => {
+    const userPreds = predictions[userName] || [];
     const total = userPreds.length;
     const completed = userPreds.filter(p => {
       const m = matches.find(m => m.id === p.matchId);
@@ -74,18 +74,18 @@ function Leaderboard({ users, predictions, matches, matchResults, currentUser })
               </tr>
             </thead>
             <tbody>
-              {sorted.map(([userId, pts], i) => {
-                const u = users.find(user => user.id === userId);
+              {sorted.map(([userName, pts], i) => {
+                const u = users.find(user => user.name === userName);
                 if (!u) return null;
-                const stats = getUserStats(userId);
-                const isMe = currentUser?.id === userId;
+                const stats = getUserStats(userName);
+                const isMe = currentUser?.name === userName;
                 const barWidth = maxPoints > 0 ? (pts / maxPoints) * 100 : 0;
-                const isExpanded = expandedUser === userId;
+                const isExpanded = expandedUser === userName;
 
                 return (
                   <>
-                    <tr key={userId} className={`lb-row ${isMe ? 'is-me' : ''} ${i < 3 ? 'top-three' : ''} ${isExpanded ? 'lb-row-expanded' : ''}`}
-                      onClick={() => setExpandedUser(isExpanded ? null : userId)}
+                    <tr key={userName} className={`lb-row ${isMe ? 'is-me' : ''} ${i < 3 ? 'top-three' : ''} ${isExpanded ? 'lb-row-expanded' : ''}`}
+                      onClick={() => setExpandedUser(isExpanded ? null : userName)}
                     >
                       <td className="lb-pos">
                         {getMedal(i) || `${i + 1}º`}
@@ -107,11 +107,11 @@ function Leaderboard({ users, predictions, matches, matchResults, currentUser })
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr key={`${userId}-detail`} className="lb-detail-row">
+                      <tr key={`${userName}-detail`} className="lb-detail-row">
                         <td colSpan={7}>
                           <UserPredictionDetail
-                            userId={userId}
-                            predictions={predictions[userId] || []}
+                            userName={userName}
+                            predictions={predictions[userName] || []}
                             matches={matches}
                             matchResults={matchResults}
                           />
@@ -140,7 +140,7 @@ function Leaderboard({ users, predictions, matches, matchResults, currentUser })
   );
 }
 
-function UserPredictionDetail({ userId, predictions, matches, matchResults }) {
+function UserPredictionDetail({ userName, predictions, matches, matchResults }) {
   const sortedPreds = [...predictions].sort((a, b) => a.matchId - b.matchId);
 
   return (

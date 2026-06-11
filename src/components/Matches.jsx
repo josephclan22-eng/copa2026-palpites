@@ -10,7 +10,7 @@ function Matches({ matches, predictions, currentUser, addPrediction, getPredicti
   const [stageFilter, setStageFilter] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
 
-  const userPreds = currentUser ? predictions[currentUser.id] || [] : [];
+  const userPreds = currentUser ? predictions[currentUser.name] || [] : [];
 
   const filtered = matches.filter(m => {
     if (statusFilter === 'pending' && matchResults[m.id]?.played) return false;
@@ -28,7 +28,7 @@ function Matches({ matches, predictions, currentUser, addPrediction, getPredicti
   };
 
   const handleSave = (matchId, h, a) => {
-    addPrediction(currentUser.id, matchId, h, a);
+    addPrediction(currentUser.name, matchId, h, a);
   };
 
   const stages = ['group', 'round32', 'round16', 'quarter', 'semi', 'third', 'final'];
@@ -76,7 +76,7 @@ function Matches({ matches, predictions, currentUser, addPrediction, getPredicti
             key={m.id}
             match={m}
             result={matchResults[m.id]}
-            prediction={getPrediction(currentUser?.id, m.id)}
+            prediction={getPrediction(currentUser?.name, m.id)}
             onClick={handlePredict}
           />
         ))}
@@ -86,7 +86,7 @@ function Matches({ matches, predictions, currentUser, addPrediction, getPredicti
       {selectedMatch && (
         <PredictionModal
           match={selectedMatch}
-          currentPrediction={getPrediction(currentUser?.id, selectedMatch.id)}
+          currentPrediction={getPrediction(currentUser?.name, selectedMatch.id)}
           matchResult={matchResults[selectedMatch.id]}
           onSave={handleSave}
           onClose={() => setSelectedMatch(null)}

@@ -1,146 +1,202 @@
 import { useState, useCallback } from 'react';
 
-const STORAGE_KEY = 'copa2026_data';
+const API = {
+  login: '/api/login',
+  register: '/api/register',
+  data: '/api/data',
+  savePredictions: '/api/save-predictions',
+  setAdmin: '/api/set-admin',
+  removeUser: '/api/remove-user',
+  clearAll: '/api/clear-all',
+  updateProfile: '/api/update-profile',
+  sync: '/api/sync',
+  validateEmail: '/api/validate-email',
+};
 
-function hashPassword(pw) {
-  let h = 0;
-  for (let i = 0; i < pw.length; i++) {
-    const c = pw.charCodeAt(i);
-    h = ((h << 5) - h) + c;
-    h = h & h;
-  }
-  return 'h_' + Math.abs(h).toString(36);
+async function apiPost(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
 }
 
-function getInitialState() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return {
-    users: [],
-    predictions: {},
-    currentUser: null,
-  };
-}
-
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+async function apiGet(url) {
+  const res = await fetch(url);
+  return res.json();
 }
 
 export function useStorage() {
-  const [data, setData] = useState(getInitialState);
-
-  const save = useCallback((newData) => {
-    setData(newData);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-    } catch {}
-  }, []);
+  const [data, setData] = useState(() => ({
+    users: [],
+    predictions: {},
+    currentUser: null,
+  }));
 
   const getCurrentUser = useCallback(() => {
-    return data.users.find(u => u.id === data.currentUser) || null;
-  }, [data]);
+    if (!data.currentUser) return null;
+    return data.users.find(u => u.name === data.currentUser) || null;
+  }, [data.users, data.currentUser]);
 
-  const login = useCallback((name, password) => {
-    const trimmed = name.trim().toLowerCase();
-    const user = data.users.find(u => u.name.toLowerCase() === trimmed);
-    if (!user) return { ok: false, error: 'Usuário não encontrado' };
-    if (user.password && hashPassword(password) !== user.password) {
-      return { ok: false, error: 'Senha incorreta' };
+  async function loadAllData() {
+    try {
+      const result = await apiGet(API.data);
+      if (result.users) {
+        const users = Object.values(result.users);
+        const predictions = {};
+        for (const [uname, preds] of Object.entries(result.predictions || {})) {
+          predictions[uname] = Object.entries(preds).map(([matchId, p]) => ({
+            matchId,
+            homeScore: p.homeScore,
+            awayScore: p.awayScore,
+            updatedAt: p.updatedAt || '',
+          }));
+        }
+        setData(prev => ({
+          ...prev,
+          users,
+          predictions,
+        }));
+      }
+    } catch {}
+  }
+
+  const login = useCallback(async (name, password) => {
+    try {
+      const result = await apiPost(API.login, { name, password });
+      if (!result.success) return { ok: false, error: result.error || 'Erro ao fazer login' };
+      setData(prev => ({ ...prev, currentUser: result.user.name }));
+      await loadAllData();
+      return { ok: true, user: result.user };
+    } catch {
+      return { ok: false, error: 'Servidor indisponível' };
     }
-    save({ ...data, currentUser: user.id });
-    return { ok: true, user };
-  }, [data, save]);
+  }, []);
 
-  const register = useCallback((name, email, password, gender = 'masculino') => {
-    const trimmed = name.trim();
-    const emailTrimmed = email.trim().toLowerCase();
-    if (!trimmed) return { ok: false, error: 'Nome é obrigatório' };
-    if (!emailTrimmed) return { ok: false, error: 'Email é obrigatório' };
-    if (!password || password.length < 3) return { ok: false, error: 'Senha deve ter no mínimo 3 caracteres' };
-
-    const lower = trimmed.toLowerCase();
-    if (data.users.some(u => u.name.toLowerCase() === lower)) {
-      return { ok: false, error: 'Nome de usuário já existe' };
+  const register = useCallback(async (name, email, password, gender = 'masculino') => {
+    try {
+      const result = await apiPost(API.register, { name, email, password, gender });
+      if (!result.success) return { ok: false, error: result.error || 'Erro ao cadastrar' };
+      setData(prev => ({ ...prev, currentUser: result.user.name }));
+      await loadAllData();
+      return { ok: true, user: result.user };
+    } catch {
+      return { ok: false, error: 'Servidor indisponível' };
     }
-    if (data.users.some(u => u.email === emailTrimmed)) {
-      return { ok: false, error: 'Email já cadastrado' };
-    }
-
-    const isAdmin = data.users.length === 0;
-    const user = {
-      id: generateId(),
-      name: trimmed,
-      email: emailTrimmed,
-      password: hashPassword(password),
-      gender,
-      isAdmin,
-      createdAt: new Date().toISOString(),
-    };
-    const newData = { ...data, users: [...data.users, user], currentUser: user.id };
-    save(newData);
-    return { ok: true, user };
-  }, [data, save]);
-
-  const setAdminStatus = useCallback((userId, isAdmin) => {
-    const users = data.users.map(u => u.id === userId ? { ...u, isAdmin } : u);
-    save({ ...data, users });
-  }, [data, save]);
-
-  const removeUser = useCallback((userId) => {
-    const users = data.users.filter(u => u.id !== userId);
-    const newData = { ...data, users };
-    if (data.currentUser === userId) newData.currentUser = null;
-    save(newData);
-  }, [data, save]);
-
-  const addPrediction = useCallback((userId, matchId, homeScore, awayScore) => {
-    const userPreds = data.predictions[userId] ? [...data.predictions[userId]] : [];
-    const existingIdx = userPreds.findIndex(p => p.matchId === matchId);
-    const pred = { matchId, homeScore: Number(homeScore), awayScore: Number(awayScore), updatedAt: new Date().toISOString() };
-
-    if (existingIdx >= 0) {
-      userPreds[existingIdx] = pred;
-    } else {
-      userPreds.push(pred);
-    }
-
-    save({
-      ...data,
-      predictions: { ...data.predictions, [userId]: userPreds },
-    });
-  }, [data, save]);
-
-  const getPrediction = useCallback((userId, matchId) => {
-    const userPreds = data.predictions[userId];
-    if (!userPreds) return null;
-    return userPreds.find(p => p.matchId === matchId) || null;
-  }, [data]);
-
-  const getUserPredictions = useCallback((userId) => {
-    return data.predictions[userId] || [];
-  }, [data]);
+  }, []);
 
   const logout = useCallback(() => {
-    save({ ...data, currentUser: null });
-  }, [data, save]);
+    setData(prev => ({ ...prev, currentUser: null }));
+  }, []);
 
-  const updateProfile = useCallback((userId, updates) => {
-    const users = data.users.map(u =>
-      u.id === userId ? { ...u, ...updates } : u
-    );
-    save({ ...data, users });
-  }, [data, save]);
+  const addPrediction = useCallback(async (userName, matchId, homeScore, awayScore) => {
+    try {
+      const user = getCurrentUser();
+      if (!user) return;
+      const storageKey = user.name;
+      const userPreds = data.predictions[storageKey] ? [...data.predictions[storageKey]] : [];
+      const existingIdx = userPreds.findIndex(p => p.matchId === matchId);
+      const pred = { matchId, homeScore: Number(homeScore), awayScore: Number(awayScore), updatedAt: new Date().toISOString() };
+      if (existingIdx >= 0) {
+        userPreds[existingIdx] = pred;
+      } else {
+        userPreds.push(pred);
+      }
+      setData(prev => ({
+        ...prev,
+        predictions: { ...prev.predictions, [storageKey]: userPreds },
+      }));
+      const predsObj = {};
+      for (const p of userPreds) {
+        predsObj[p.matchId] = { homeScore: p.homeScore, awayScore: p.awayScore };
+      }
+      await apiPost(API.savePredictions, { name: user.name, predictions: predsObj });
+    } catch {}
+  }, [data.predictions, getCurrentUser]);
 
-  const resetAll = useCallback(() => {
-    const empty = { users: [], predictions: {}, currentUser: null };
-    save(empty);
-  }, [save]);
+  const getPrediction = useCallback((userName, matchId) => {
+    const userPreds = data.predictions[userName];
+    if (!userPreds) return null;
+    return userPreds.find(p => p.matchId === matchId) || null;
+  }, [data.predictions]);
+
+  const getUserPredictions = useCallback((userName) => {
+    return data.predictions[userName] || [];
+  }, [data.predictions]);
+
+  const setAdminStatus = useCallback(async (adminName, targetName, isAdmin) => {
+    try {
+      const result = await apiPost(API.setAdmin, { adminName, targetName, isAdmin });
+      if (result.success) {
+        setData(prev => ({
+          ...prev,
+          users: prev.users.map(u => u.name === targetName ? { ...u, isAdmin } : u),
+        }));
+      }
+      return result;
+    } catch {
+      return { success: false, error: 'Servidor indisponível' };
+    }
+  }, []);
+
+  const removeUser = useCallback(async (adminName, targetName) => {
+    try {
+      const result = await apiPost(API.removeUser, { adminName, targetName });
+      if (result.success) {
+        setData(prev => {
+          const newPredictions = { ...prev.predictions };
+          delete newPredictions[targetName];
+          return {
+            ...prev,
+            users: prev.users.filter(u => u.name !== targetName),
+            predictions: newPredictions,
+            currentUser: prev.currentUser === targetName ? null : prev.currentUser,
+          };
+        });
+      }
+      return result;
+    } catch {
+      return { success: false, error: 'Servidor indisponível' };
+    }
+  }, []);
+
+  const updateProfile = useCallback(async (userName, updates) => {
+    try {
+      const result = await apiPost(API.updateProfile, { name: userName, ...updates });
+      if (result.success) {
+        setData(prev => ({
+          ...prev,
+          users: prev.users.map(u => u.name === userName ? { ...u, ...result.user } : u),
+        }));
+        return { ok: true };
+      }
+      return { ok: false, error: result.error };
+    } catch {
+      return { ok: false, error: 'Servidor indisponível' };
+    }
+  }, []);
+
+  const resetAll = useCallback(async (adminName) => {
+    try {
+      const result = await apiPost(API.clearAll, { adminName });
+      if (result.success) {
+        setData({ users: [], predictions: {}, currentUser: null });
+      }
+      return result;
+    } catch {
+      return { success: false };
+    }
+  }, []);
+
+  const loadServerData = useCallback(async () => {
+    await loadAllData();
+  }, []);
 
   return {
-    ...data,
-    matchResults: data.matchResults || {},
+    users: data.users,
+    predictions: data.predictions,
+    currentUser: data.currentUser,
     getCurrentUser,
     login,
     register,
@@ -152,5 +208,6 @@ export function useStorage() {
     getUserPredictions,
     updateProfile,
     resetAll,
+    loadServerData,
   };
 }

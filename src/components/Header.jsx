@@ -33,12 +33,12 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
     setGender('masculino');
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     if (!name.trim()) { setError('Digite seu nome'); return; }
     if (!password) { setError('Digite sua senha'); return; }
-    const result = onLogin(name.trim(), password);
+    const result = await onLogin(name.trim(), password);
     if (result?.error) { setError(result.error); return; }
     resetForm();
     setShowLogin(false);
@@ -53,7 +53,7 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
     if (password !== confirmPassword) { setError('Senhas não conferem'); return; }
     const validation = await validateEmailDomain(email);
     if (!validation.valid) { setError(validation.error); return; }
-    const result = onRegister(name.trim(), email.trim(), password, gender);
+    const result = await onRegister(name.trim(), email.trim(), password, gender);
     if (result?.error) { setError(result.error); return; }
     resetForm();
     setShowLogin(false);
@@ -66,25 +66,29 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
 
   useEffect(() => {
     if (currentUser) {
-      setAvatarUrlInput(currentUser.avatarUrl || '');
+      setAvatarUrlInput(currentUser.profilePhoto || '');
     }
   }, [currentUser]);
 
-  const handleSaveAvatar = () => {
+  const handleSaveAvatar = async () => {
     const url = avatarUrlInput.trim();
     if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
       setProfileMsg('URL inválida. Use http:// ou https://');
       return;
     }
-    onUpdateProfile(currentUser.id, { avatarUrl: url || null });
-    setProfileMsg(url ? 'Foto salva!' : 'Foto removida!');
+    const result = await onUpdateProfile(currentUser.name, { profilePhoto: url || '' });
+    if (result?.ok) {
+      setProfileMsg(url ? 'Foto salva!' : 'Foto removida!');
+    }
     setTimeout(() => setProfileMsg(''), 2000);
   };
 
-  const handleRemoveAvatar = () => {
+  const handleRemoveAvatar = async () => {
     setAvatarUrlInput('');
-    onUpdateProfile(currentUser.id, { avatarUrl: null });
-    setProfileMsg('Foto removida!');
+    const result = await onUpdateProfile(currentUser.name, { profilePhoto: '' });
+    if (result?.ok) {
+      setProfileMsg('Foto removida!');
+    }
     setTimeout(() => setProfileMsg(''), 2000);
   };
 
@@ -134,7 +138,7 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
 
         <div className="header-user" ref={menuRef}>
           {currentUser ? (
-            <div className="user-logged-in" onClick={() => { setShowProfile(!showProfile); setProfileMsg(''); setAvatarUrlInput(currentUser.avatarUrl || ''); }}>
+            <div className="user-logged-in" onClick={() => { setShowProfile(!showProfile); setProfileMsg(''); setAvatarUrlInput(currentUser.profilePhoto || ''); }}>
               <Avatar user={currentUser} size={32} className="user-avatar" />
               <span className="user-name">{currentUser.name}</span>
               {isAdmin && <span className="user-badge-admin">ADMIN</span>}
@@ -153,7 +157,7 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
               <h4 className="login-title">Minha Foto</h4>
               {profileMsg && <p className={`login-msg ${profileMsg.includes('salva') || profileMsg.includes('removida') ? 'success' : ''}`}>{profileMsg}</p>}
               <div className="profile-avatar-preview">
-                <Avatar user={{ ...currentUser, avatarUrl: avatarUrlInput || currentUser.avatarUrl }} size={64} />
+                <Avatar user={{ ...currentUser, profilePhoto: avatarUrlInput || currentUser.profilePhoto }} size={64} />
               </div>
               <input type="text" placeholder="URL da foto (https://...)" value={avatarUrlInput}
                 onChange={(e) => setAvatarUrlInput(e.target.value)} className="login-input" />

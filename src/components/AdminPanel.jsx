@@ -149,19 +149,19 @@ function AdminUsers({ users, currentUser, setAdminStatus, removeUser, onResetAll
           </thead>
           <tbody>
             {users.map((u, i) => (
-              <tr key={u.id} className={currentUser?.id === u.id ? 'admin-users-row-me' : ''}>
+              <tr key={u.name} className={currentUser?.name === u.name ? 'admin-users-row-me' : ''}>
                 <td>{i + 1}</td>
-                <td>{u.name} {currentUser?.id === u.id && <span className="admin-users-badge">Você</span>}</td>
+                <td>{u.name} {currentUser?.name === u.name && <span className="admin-users-badge">Você</span>}</td>
                 <td>{u.email || '-'}</td>
                 <td>
-                  {currentUser?.id === u.id ? (
+                  {currentUser?.name === u.name ? (
                     <span className="admin-badge-static">Admin</span>
                   ) : (
                     <label className="admin-toggle" title={u.isAdmin ? 'Remover admin' : 'Tornar admin'}>
                       <input
                         type="checkbox"
                         checked={!!u.isAdmin}
-                        onChange={() => setAdminStatus(u.id, !u.isAdmin)}
+                        onChange={() => setAdminStatus(currentUser?.name, u.name, !u.isAdmin)}
                       />
                       <span className="admin-toggle-slider"></span>
                     </label>
@@ -169,14 +169,14 @@ function AdminUsers({ users, currentUser, setAdminStatus, removeUser, onResetAll
                 </td>
                 <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString('pt-BR') : '-'}</td>
                 <td>
-                  {currentUser?.id !== u.id && (
-                    confirmRemove === u.id ? (
+                  {currentUser?.name !== u.name && (
+                    confirmRemove === u.name ? (
                       <span className="admin-users-actions">
-                        <button className="admin-users-btn danger" onClick={() => { removeUser(u.id); setConfirmRemove(null); }}>Confirmar</button>
+                        <button className="admin-users-btn danger" onClick={() => { removeUser(currentUser?.name, u.name); setConfirmRemove(null); }}>Confirmar</button>
                         <button className="admin-users-btn" onClick={() => setConfirmRemove(null)}>Cancelar</button>
                       </span>
                     ) : (
-                      <button className="admin-users-btn danger-outline" onClick={() => setConfirmRemove(u.id)}>Remover</button>
+                      <button className="admin-users-btn danger-outline" onClick={() => setConfirmRemove(u.name)}>Remover</button>
                     )
                   )}
                 </td>
@@ -301,7 +301,7 @@ function AdminPredictions({ matches, matchResults, users, predictions }) {
     if (selectedGroup && m.group !== selectedGroup) return false;
     if (selectedStage && m.stage !== selectedStage) return false;
     const hasAnyPred = users.some(u => {
-      const preds = predictions[u.id] || [];
+      const preds = predictions[u.name] || [];
       return preds.some(p => p.matchId === m.id);
     });
     return hasAnyPred;
@@ -309,7 +309,7 @@ function AdminPredictions({ matches, matchResults, users, predictions }) {
 
   const getPredsForMatch = (matchId) => {
     return users.map(u => {
-      const preds = predictions[u.id] || [];
+      const preds = predictions[u.name] || [];
       const p = preds.find(x => x.matchId === matchId) || null;
       return { user: u, prediction: p };
     });
@@ -378,7 +378,7 @@ function AdminPredictions({ matches, matchResults, users, predictions }) {
                       {getPredsForMatch(m.id).map(({ user, prediction }) => {
                         const status = predStatus(prediction, m.id);
                         return (
-                          <tr key={user.id}>
+                          <tr key={user.name}>
                             <td>{user.name}</td>
                             <td>{prediction ? `${prediction.homeScore} x ${prediction.awayScore}` : '—'}</td>
                             <td>

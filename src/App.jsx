@@ -12,18 +12,9 @@ import { resolveAllMatches } from './data/standings';
 import { useStorage } from './hooks/useStorage';
 import { syncResults } from './services/api';
 
-const STORAGE_RESULTS_KEY = 'copa2026_results';
-
-function loadMatchResults() {
-  try {
-    const stored = localStorage.getItem(STORAGE_RESULTS_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch { return {}; }
-}
-
 function App() {
   const [tab, setTab] = useState('dashboard');
-  const [matchResults, setMatchResults] = useState(loadMatchResults);
+  const [matchResults, setMatchResults] = useState({});
   const [syncState, setSyncState] = useState({ syncing: false, lastSync: null, error: null });
 
   useEffect(() => {
@@ -48,19 +39,24 @@ function App() {
     logout,
     addPrediction,
     getPrediction,
-    getUserPredictions,
     setAdminStatus,
     removeUser,
     updateProfile,
     resetAll,
+    loadServerData,
   } = useStorage();
+
+  useEffect(() => {
+    loadServerData();
+    const interval = setInterval(loadServerData, 30000);
+    return () => clearInterval(interval);
+  }, [loadServerData]);
 
   const curUser = getCurrentUser();
   const isAdmin = curUser?.isAdmin;
-
   const canViewAdmin = isAdmin;
 
-  const handleUpdateResult = (matchId, homeScore, awayScore) => {
+  const handleUpdateResult = useCallback(async (matchId, homeScore, awayScore) => {
     const newResults = {
       ...matchResults,
       [matchId]: homeScore !== null && awayScore !== null
@@ -69,9 +65,13 @@ function App() {
     };
     setMatchResults(newResults);
     try {
-      localStorage.setItem(STORAGE_RESULTS_KEY, JSON.stringify(newResults));
+      await fetch('/api/save-results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminName: curUser?.name, results: newResults }),
+      });
     } catch {}
-  };
+  }, [matchResults, curUser]);
 
   const handleSyncResults = useCallback(async () => {
     setSyncState(s => ({ ...s, syncing: true, error: null }));
@@ -83,7 +83,6 @@ function App() {
           for (const [id, result] of Object.entries(data.results)) {
             merged[id] = result;
           }
-          try { localStorage.setItem(STORAGE_RESULTS_KEY, JSON.stringify(merged)); } catch {}
           return merged;
         });
       }
@@ -156,7 +155,7 @@ function App() {
             predictions={predictions} standings={standings}
             syncState={syncState} onSync={handleSyncResults}
             setAdminStatus={setAdminStatus} removeUser={removeUser}
-            onResetAll={resetAll} currentUser={curUser}
+            onResetAll={() => resetAll(curUser?.name)} currentUser={curUser}
           />
         );
       default:

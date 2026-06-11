@@ -12,7 +12,7 @@ function Avatar({ user, size = 32, className = '' }) {
   }
 
   const letter = user.name ? user.name[0].toUpperCase() : '?';
-  const avatarUrl = user.avatarUrl && !imgError ? user.avatarUrl : null;
+  const avatarUrl = user.profilePhoto && !imgError ? user.profilePhoto : null;
 
   if (avatarUrl) {
     return (

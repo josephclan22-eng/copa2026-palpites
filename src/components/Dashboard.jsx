@@ -7,7 +7,7 @@ function Dashboard({ users, predictions, matches, currentUser, matchResults, onT
     ...(matchResults[m.id] || {}),
   })));
 
-  const allWithPoints = users.map(u => [u.id, userPoints[u.id] || 0]);
+  const allWithPoints = users.map(u => [u.name, userPoints[u.name] || 0]);
   const sorted = allWithPoints
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10);
@@ -16,7 +16,7 @@ function Dashboard({ users, predictions, matches, currentUser, matchResults, onT
     .filter(m => !matchResults[m.id]?.played)
     .slice(0, 5);
 
-  const userPreds = currentUser ? predictions[currentUser.id] || [] : [];
+  const userPreds = currentUser ? predictions[currentUser.name] || [] : [];
   const predCount = userPreds.length;
   const totalMatches = matches.length;
   const completedMatches = matches.filter(m => matchResults[m.id]?.played).length;
@@ -39,7 +39,7 @@ function Dashboard({ users, predictions, matches, currentUser, matchResults, onT
               </div>
               <div className="stat-card">
                 <span className="stat-icon">⭐</span>
-                <span className="stat-value">{userPoints[currentUser.id] || 0}</span>
+                <span className="stat-value">{userPoints[currentUser.name] || 0}</span>
                 <span className="stat-label">Seus Pontos</span>
               </div>
               <div className="stat-card">
@@ -112,12 +112,12 @@ function Dashboard({ users, predictions, matches, currentUser, matchResults, onT
           </div>
           <div className="mini-leaderboard">
             {sorted.length === 0 && <p className="empty-msg">Ninguém pontuou ainda.</p>}
-            {sorted.map(([userId, pts], i) => {
-              const u = users.find(user => user.id === userId);
+            {sorted.map(([userName, pts], i) => {
+              const u = users.find(user => user.name === userName);
               if (!u) return null;
               const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}º`;
               return (
-                <div key={userId} className={`mini-rank-row ${currentUser?.id === userId ? 'is-me' : ''}`}>
+                <div key={userName} className={`mini-rank-row ${currentUser?.name === userName ? 'is-me' : ''}`}>
                   <span className="mini-rank-pos">{medal}</span>
                   <span className="mini-rank-name">{u.name}</span>
                   <span className="mini-rank-pts">{pts} pts</span>
