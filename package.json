@@ -8,7 +8,7 @@
     "server": "node server/index.js",
     "dev:all": "start /B node server/index.js && vite",
     "build": "vite build",
-    "start": "npm run build && node server/index.js",
+    "start": "node server/index.js",
     "preview": "vite preview"
   },
   "devDependencies": {
