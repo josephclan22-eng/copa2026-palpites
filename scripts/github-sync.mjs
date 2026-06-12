@@ -286,11 +286,12 @@ async function run() {
     const hasScore = fm.HomeTeamScore !== null && fm.AwayTeamScore !== null
     if (!hasScore) { console.log(`  Skip M${match.id} ${ourHome} vs ${ourAway}: sem placar`); continue }
 
+    const isFinished = fm.MatchStatus === 0
     const entry = {
       match_id: match.id,
       home_score: Number(fm.HomeTeamScore),
       away_score: Number(fm.AwayTeamScore),
-      played: true,
+      played: isFinished,
       match_time: fm.MatchTime || '',
       match_status: fm.MatchStatus,
       updated_at: new Date().toISOString(),
