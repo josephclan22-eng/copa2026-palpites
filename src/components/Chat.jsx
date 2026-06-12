@@ -52,7 +52,10 @@ function Chat({ currentUser, users }) {
     if (err) setError(err.message === 'relation "chat_messages" does not exist'
       ? 'Chat não configurado. Rode o SQL no Supabase.'
       : err.message);
-    else setText('');
+    else {
+      setMessages(prev => [...prev, { ...msg, id: Date.now() }]);
+      setText('');
+    }
   }
 
   return (
