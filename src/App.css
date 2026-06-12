@@ -2316,7 +2316,7 @@ body {
   .modal-content { padding: 24px; margin: 12px; }
   .score-field input { width: 56px; height: 56px; font-size: 1.6rem; }
   .rules-grid { grid-template-columns: 1fr; }
-  .user-menu { right: -60px; width: 240px; }
+  .user-menu { right: 0; width: 260px; left: auto; }
   .news-grid { gap: 16px; }
   .news-list { gap: 12px; }
   .fifa-news-card-body { padding: 16px; }
@@ -2342,9 +2342,11 @@ body {
   .fifa-card-score { font-size: 1.2rem; min-width: 28px; }
   .fifa-card-body { padding: 12px; }
   .goal-item { font-size: 0.55rem; }
-  .user-menu { right: -80px; width: 220px; }
-  .user-logged-in { gap: 4px; }
+  .user-menu { right: 0; width: 240px; left: auto; }
+  .user-logged-in { gap: 4px; padding: 4px 8px 4px 4px; }
   .user-arrow { display: none; }
+  .user-logged-in .user-badge-admin { display: none; }
+  .user-logout-btn { font-size: 0.6rem; padding: 2px 8px; }
   .modal-content { padding: 16px; margin: 8px; }
   .score-field input { width: 48px; height: 48px; font-size: 1.3rem; }
   .dashboard-grid { grid-template-columns: 1fr; }
@@ -2357,15 +2359,20 @@ body {
 }
 
 @media (max-width: 360px) {
-  .header-top { padding: 6px 8px 2px; gap: 4px; }
+  .header-top { padding: 6px 8px 2px; gap: 4px; flex-wrap: nowrap; }
   .header-title h1 { font-size: 0.8rem; }
   .header-brand-icon { width: 28px; height: 28px; }
-  .header-brand { gap: 6px; }
+  .header-brand { gap: 6px; min-width: 0; flex-shrink: 1; overflow: hidden; }
+  .header-title { min-width: 0; overflow: hidden; }
+  .header-title h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-subtitle { display: none; }
   .nav-btn { padding: 6px 6px; font-size: 0.8rem; }
   .nav-icon { font-size: 0.8rem; }
+  .nav-label { display: none; }
   .user-btn { font-size: 0.7rem; padding: 4px 8px; }
-  .user-name { max-width: 60px; font-size: 0.65rem; }
-  .user-logout-btn { font-size: 0.6rem; padding: 2px 6px; }
+  .user-name { max-width: 50px; font-size: 0.6rem; }
+  .user-logout-btn { font-size: 0.55rem; padding: 2px 6px; }
+  .user-menu { right: 0; width: 220px; left: auto; }
   .main-content { padding: 8px; border-radius: 8px; }
   .dashboard-welcome { padding: 12px; }
   .dashboard-welcome h2 { font-size: 1rem; }
