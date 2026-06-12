@@ -8,8 +8,10 @@ function getGroupLabel(match) {
 }
 
 function getMatchStatus(match, result) {
-  if (!result || !result.played) return 'scheduled';
-  return 'finished';
+  if (result?.played) return 'finished';
+  if (result && result.homeScore !== undefined && result.awayScore !== undefined) return 'finished';
+  if (isMatchLocked(match)) return 'live';
+  return 'scheduled';
 }
 
 function getTeamName(teamKey) {
@@ -53,6 +55,32 @@ function CountdownLabel({ match }) {
   return label ? <span className="fifa-card-countdown">{label}</span> : null;
 }
 
+function LiveTimer({ match }) {
+  const [label, setLabel] = useState('');
+
+  useEffect(() => {
+    function tick() {
+      const remaining = getLockTimeRemaining(match);
+      const elapsed = Math.abs(Math.min(remaining, 0));
+      if (elapsed < 90) {
+        setLabel(`${elapsed}'`);
+      } else if (elapsed < 105) {
+        setLabel(`90'`);
+      } else if (elapsed < 120) {
+        setLabel(`90' ${Math.min(elapsed - 90, 30)}' 2ºT`);
+      } else {
+        setLabel(`90' 2ºT`);
+      }
+    }
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [match]);
+
+  return label ? <span className="fifa-card-live-tag live">{label}</span> : null;
+}
+
 function FifaMatchCard({ match, result, prediction, onClick }) {
   const status = getMatchStatus(match, result);
   const homeScore = result?.homeScore;
@@ -65,7 +93,7 @@ function FifaMatchCard({ match, result, prediction, onClick }) {
     <div className={`fifa-card ${locked ? 'fifa-card-locked' : ''}`} onClick={() => !locked && onClick?.(match)} style={{ cursor: onClick && !locked ? 'pointer' : 'default' }}>
       <div className="fifa-card-header">
         <span className="fifa-card-round">{getGroupLabel(match)}</span>
-        {status === 'live' && <span className="fifa-card-live-tag">LIVE</span>}
+        {status === 'live' && <LiveTimer match={match} />}
         {locked && <span className="fifa-card-lock-tag">🔒</span>}
       </div>
 

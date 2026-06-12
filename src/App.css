@@ -2310,6 +2310,13 @@ body {
   animation: fifaLivePulse 1.5s ease-in-out infinite;
 }
 
+.fifa-card-live-tag.live {
+  text-transform: none;
+  font-size: 0.7rem;
+  background: #e67e22;
+  animation: fifaLivePulse 1s ease-in-out infinite;
+}
+
 @keyframes fifaLivePulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
