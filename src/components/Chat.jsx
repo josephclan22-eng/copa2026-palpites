@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import Avatar from './Avatar';
 import { containsProfanity } from '../utils/profanity';
 
-function Chat({ currentUser, users }) {
+function Chat({ currentUser, users, onRead }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -17,7 +17,7 @@ function Chat({ currentUser, users }) {
         .select('*')
         .order('created_at', { ascending: true })
         .limit(100);
-      if (data) setMessages(data);
+      if (data) { setMessages(data); if (data.length && onRead) onRead(data[data.length - 1].id); }
     } catch {}
     setLoading(false);
   }

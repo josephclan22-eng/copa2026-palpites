@@ -19,24 +19,27 @@ function App() {
   const [syncState, setSyncState] = useState({ syncing: false, lastSync: null, error: null });
   const [chatUnread, setChatUnread] = useState(0);
   const chatLastId = useRef(0);
-  const chatTabActive = useRef(false);
+
+  const handleChatRead = useCallback((lastId) => {
+    chatLastId.current = lastId;
+    setChatUnread(0);
+  }, []);
 
   useEffect(() => {
-    chatTabActive.current = tab === 'chat';
-    if (tab === 'chat') setChatUnread(0);
+    if (tab === 'chat') { chatLastId.current = 0; setChatUnread(0); }
   }, [tab]);
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      if (chatTabActive.current) return;
+      if (tab === 'chat') return;
       const { data } = await supabase.from('chat_messages').select('id').order('id', { ascending: false }).limit(1);
       if (data && data[0] && data[0].id > chatLastId.current) {
         if (chatLastId.current === 0) chatLastId.current = data[0].id;
-        else setChatUnread(prev => prev + 1);
+        else { const { count } = await supabase.from('chat_messages').select('id', { count: 'exact' }).gt('id', chatLastId.current); if (count) setChatUnread(count); }
       }
-    }, 10000);
+    }, 8000);
     return () => clearInterval(interval);
-  }, []);
+  }, [tab]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -176,7 +179,7 @@ function App() {
           />
         );
       case 'chat':
-        return <Chat currentUser={curUser} users={users} />;
+        return <Chat currentUser={curUser} users={users} onRead={handleChatRead} />;
       case 'news':
         return <News />;
       case 'admin':
