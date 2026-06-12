@@ -1,6 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { readFileSync } from 'fs'
-import { join } from 'path'
 
 const supabase = createClient(process.env.VITE_SUPABASE_URL || '', process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '')
 
@@ -33,12 +31,7 @@ export default async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   try {
-    const __dirname = process.cwd()
-    const matchesPath = join(__dirname, 'src', 'data', 'matches.js')
-    const content = readFileSync(matchesPath, 'utf8')
-    const arr = content.match(/\[[\s\S]*\]/)?.[0]
-    if (!arr) return res.json({ success: false, error: 'Could not parse matches' })
-    const ourMatches = eval(`(${arr})`)
+    const { default: ourMatches } = await import('../src/data/matches.js')
 
     const fifaRes = await fetch(FIFA_API)
     if (!fifaRes.ok) return res.json({ success: false, error: `FIFA API returned ${fifaRes.status}` })
