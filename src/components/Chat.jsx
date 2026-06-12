@@ -53,8 +53,8 @@ function Chat({ currentUser, users }) {
       ? 'Chat não configurado. Rode o SQL no Supabase.'
       : err.message);
     else {
-      setMessages(prev => [...prev, { ...msg, id: Date.now() }]);
       setText('');
+      await loadMessages();
     }
   }
 
