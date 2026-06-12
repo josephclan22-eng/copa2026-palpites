@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import teams, { getFlagUrl } from '../data/teams';
 import { isMatchLocked } from '../utils/lock';
+import { calculatePoints, getPointsLabel, getPointsColor } from '../data/scoring';
 
 function PredictionModal({ match, currentPrediction, onSave, onClose, matchResult }) {
   const [homeScore, setHomeScore] = useState(currentPrediction?.homeScore ?? '');
@@ -12,6 +13,10 @@ function PredictionModal({ match, currentPrediction, onSave, onClose, matchResul
   const isPlayed = matchResult?.played;
   const isKnockout = match.stage !== 'group';
   const locked = isMatchLocked(match);
+
+  const predPoints = isPlayed && currentPrediction
+    ? calculatePoints(currentPrediction, matchResult)
+    : null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -53,6 +58,11 @@ function PredictionModal({ match, currentPrediction, onSave, onClose, matchResul
         {isPlayed && (
           <div className="modal-result">
             <strong>Resultado:</strong> {matchResult.homeScore} x {matchResult.awayScore}
+          </div>
+        )}
+        {predPoints !== null && (
+          <div className="modal-points" style={{ color: getPointsColor(predPoints) }}>
+            <strong>Pontos: {predPoints}</strong> — {getPointsLabel(predPoints)}
           </div>
         )}
 

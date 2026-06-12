@@ -1093,6 +1093,16 @@ body {
   font-weight: 600;
 }
 
+.modal-points {
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.05);
+}
+
 .modal-locked {
   text-align: center;
   margin-bottom: 16px;

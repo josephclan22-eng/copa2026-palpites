@@ -44,6 +44,7 @@ function App() {
     updateProfile,
     resetAll,
     loadServerData,
+    recalculateAllPoints,
   } = useStorage();
 
   useEffect(() => {
@@ -99,6 +100,7 @@ function App() {
         }
         setMatchResults(results);
       }
+      recalculateAllPoints();
       setSyncState({ syncing: false, lastSync: new Date().toISOString(), error: null });
     } catch {
       setSyncState(s => ({ ...s, syncing: false, error: 'Erro ao carregar resultados' }));
