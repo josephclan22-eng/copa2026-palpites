@@ -45,7 +45,7 @@ export function calculateAllPoints(predictions, matches) {
     userPreds.forEach(pred => {
       const match = matches.find(m => m.id === pred.matchId);
       if (!match) return;
-      if (match.homeScore === undefined || match.awayScore === undefined) return;
+      if (match.homeScore == null || match.awayScore == null) return;
       userPoints[userId] += calculatePoints(pred, match);
     });
   });

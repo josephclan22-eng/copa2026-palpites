@@ -8,9 +8,10 @@ function getGroupLabel(match) {
 }
 
 function getMatchStatus(match, result) {
-  if (result?.played) return 'finished';
-  if (result?.matchStatus === 0) return 'finished';
-  if (result?.matchTime || result?.matchStatus === 3) return 'live';
+  if (!result) return 'scheduled';
+  if (result.played) return 'finished';
+  if (result.matchStatus === 0) return 'finished';
+  if ((result.matchTime || result.matchStatus === 3) && result.homeScore != null && result.awayScore != null) return 'live';
   if (isMatchLocked(match)) return 'live';
   return 'scheduled';
 }

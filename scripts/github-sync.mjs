@@ -86,20 +86,19 @@ async function run() {
     const match = ourMatches.find(m => m.homeTeam === ourHome && m.awayTeam === ourAway && m.date === dateStr)
     if (!match) { console.log(`  Skip ${ourHome} vs ${ourAway} (${dateStr}): jogo nao encontrado no matches.js`); continue }
     const hasScore = fm.HomeTeamScore !== null && fm.AwayTeamScore !== null
-    const isLive = fm.MatchStatus === 3 || (fm.MatchTime && !hasScore)
-    if (!hasScore && !isLive) { console.log(`  Skip M${match.id} ${ourHome} vs ${ourAway}: sem placar e nao ao vivo`); continue }
+    if (!hasScore) { console.log(`  Skip M${match.id} ${ourHome} vs ${ourAway}: sem placar`); continue }
 
     const entry = {
       match_id: match.id,
-      home_score: hasScore ? Number(fm.HomeTeamScore) : null,
-      away_score: hasScore ? Number(fm.AwayTeamScore) : null,
-      played: hasScore,
+      home_score: Number(fm.HomeTeamScore),
+      away_score: Number(fm.AwayTeamScore),
+      played: true,
       match_time: fm.MatchTime || '',
       match_status: fm.MatchStatus,
       updated_at: new Date().toISOString(),
     }
 
-    if (hasScore && fm.IdMatch) {
+    if (fm.IdMatch) {
       const goals = await fetchMatchGoals(fm.IdMatch)
       if (goals) {
         entry.home_goals = goals.homeGoals
