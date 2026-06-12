@@ -47,7 +47,32 @@ export default async (req, res) => {
       const dateStr = parseLocalDate(fm.LocalDate || fm.Date)
       const match = ourMatches.find(m => m.homeTeam === ourHome && m.awayTeam === ourAway && m.date === dateStr)
       if (!match || fm.HomeTeamScore === null || fm.AwayTeamScore === null) continue
-      changes.push({ match_id: match.id, home_score: Number(fm.HomeTeamScore), away_score: Number(fm.AwayTeamScore), played: true, updated_at: new Date().toISOString() })
+
+      const entry = {
+        match_id: match.id,
+        home_score: Number(fm.HomeTeamScore),
+        away_score: Number(fm.AwayTeamScore),
+        played: fm.MatchStatus === 0,
+        match_time: fm.MatchTime || '',
+        match_status: fm.MatchStatus,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (fm.IdMatch) {
+        try {
+          const det = await fetch(`https://api.fifa.com/api/v3/live/football/${fm.IdMatch}`)
+          if (det.ok) {
+            const detData = await det.json()
+            const getPlayerName = (players, id) => players?.find(p => p.IdPlayer === id)?.PlayerName?.[0]?.Description || ''
+            const homePlayers = detData.HomeTeam?.Players || []
+            const awayPlayers = detData.AwayTeam?.Players || []
+            entry.home_goals = (detData.HomeTeam?.Goals || []).map(g => ({ player: getPlayerName(homePlayers, g.IdPlayer), minute: (g.Minute || '').replace("'", '') }))
+            entry.away_goals = (detData.AwayTeam?.Goals || []).map(g => ({ player: getPlayerName(awayPlayers, g.IdPlayer), minute: (g.Minute || '').replace("'", '') }))
+          }
+        } catch {}
+      }
+
+      changes.push(entry)
     }
 
     if (changes.length > 0) {
