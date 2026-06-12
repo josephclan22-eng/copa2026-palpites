@@ -55,11 +55,13 @@ async function run() {
     const awayCode = fm.Away?.Abbreviation
     const ourHome = FIFA_TO_OURS[homeCode]
     const ourAway = FIFA_TO_OURS[awayCode]
-    if (!ourHome || !ourAway) continue
+    if (!ourHome || !ourAway) { console.log(`  Skip ${homeCode} vs ${awayCode}: equipe nao mapeada`); continue }
     const dateStr = parseLocalDate(fm.LocalDate || fm.Date)
     const match = ourMatches.find(m => m.homeTeam === ourHome && m.awayTeam === ourAway && m.date === dateStr)
-    if (!match || fm.HomeTeamScore === null || fm.AwayTeamScore === null) continue
+    if (!match) { console.log(`  Skip ${ourHome} vs ${ourAway} (${dateStr}): jogo nao encontrado no matches.js`); continue }
+    if (fm.HomeTeamScore === null || fm.AwayTeamScore === null) { console.log(`  Skip M${match.id} ${ourHome} vs ${ourAway}: sem placar ainda`); continue }
     changes.push({ match_id: match.id, home_score: Number(fm.HomeTeamScore), away_score: Number(fm.AwayTeamScore), played: true, updated_at: new Date().toISOString() })
+    console.log(`  Match M${match.id}: ${ourHome} ${fm.HomeTeamScore}-${fm.AwayTeamScore} ${ourAway} -> salvo!`)
   }
 
   if (changes.length > 0) {
