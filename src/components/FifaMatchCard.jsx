@@ -10,8 +10,24 @@ function getGroupLabel(match) {
 function getMatchStatus(match, result) {
   if (result?.played) return 'finished';
   if (result && result.homeScore !== undefined && result.awayScore !== undefined) return 'finished';
+  if (result?.matchTime) return 'live';
   if (isMatchLocked(match)) return 'live';
   return 'scheduled';
+}
+
+function getMatchLabel(result) {
+  if (!result) return null;
+  if (result.played) return 'Encerrado';
+  const t = result.matchTime || '';
+  if (t.includes('+')) {
+    const mins = parseInt(t);
+    return mins >= 45 ? '2º Tempo' : '1º Tempo';
+  }
+  const mins = parseInt(t);
+  if (isNaN(mins)) return 'Ao Vivo';
+  if (mins <= 45) return `1ºT ${mins}'`;
+  if (mins <= 60) return `Intervalo`;
+  return `2ºT ${mins}'`;
 }
 
 function getTeamName(teamKey) {
@@ -26,6 +42,16 @@ function getBadgeUrl(teamKey) {
     return `https://flagcdn.com/h60/${t.code.toLowerCase()}.png`;
   }
   return `https://flagcdn.com/h60/${teamKey}.png`;
+}
+
+function getStatusClass(result) {
+  if (!result) return '';
+  if (result.played) return 'finished';
+  if (result.matchTime) return 'live';
+  const mins = parseInt(result.matchTime);
+  if (!isNaN(mins) && mins <= 45) return 'first-half';
+  if (!isNaN(mins) && mins > 45 && mins <= 60) return 'halftime';
+  return 'second-half';
 }
 
 function CountdownLabel({ match }) {
@@ -55,17 +81,31 @@ function CountdownLabel({ match }) {
   return label ? <span className="fifa-card-countdown">{label}</span> : null;
 }
 
-function LiveTimer({ match }) {
+function LiveTimer({ match, result }) {
   const [label, setLabel] = useState('');
 
   useEffect(() => {
+    if (result?.matchTime) {
+      const t = result.matchTime;
+      if (t === 'Interval') { setLabel('Intervalo'); return; }
+      const mins = parseInt(t);
+      if (!isNaN(mins)) {
+        if (mins <= 45) { setLabel(`${mins}' 1ºT`); return; }
+        if (mins <= 60) { setLabel(`Intervalo`); return; }
+        setLabel(`${mins}' 2ºT`);
+        return;
+      }
+      setLabel(`Ao Vivo`);
+      return;
+    }
+
     function tick() {
       const remaining = getLockTimeRemaining(match);
       const elapsed = Math.abs(Math.min(remaining, 0));
       if (elapsed < 90) {
-        setLabel(`${elapsed}'`);
+        setLabel(`${elapsed}' 1ºT`);
       } else if (elapsed < 105) {
-        setLabel(`90'`);
+        setLabel(`90' 2ºT`);
       } else if (elapsed < 120) {
         setLabel(`90' ${Math.min(elapsed - 90, 30)}' 2ºT`);
       } else {
@@ -74,9 +114,9 @@ function LiveTimer({ match }) {
     }
 
     tick();
-    const id = setInterval(tick, 1000);
+    const id = setInterval(tick, 60000);
     return () => clearInterval(id);
-  }, [match]);
+  }, [match, result]);
 
   return label ? <span className="fifa-card-live-tag live">{label}</span> : null;
 }
@@ -88,19 +128,25 @@ function FifaMatchCard({ match, result, prediction, onClick }) {
   const homeName = getTeamName(match.homeTeam);
   const awayName = getTeamName(match.awayTeam);
   const locked = !result?.played && isMatchLocked(match);
+  const matchLabel = getMatchLabel(result);
+  const statusClass = getStatusClass(result);
+  const homeGoals = result?.homeGoals || [];
+  const awayGoals = result?.awayGoals || [];
 
   return (
-    <div className={`fifa-card ${locked ? 'fifa-card-locked' : ''}`} onClick={() => !locked && onClick?.(match)} style={{ cursor: onClick && !locked ? 'pointer' : 'default' }}>
+    <div className={`fifa-card ${locked ? 'fifa-card-locked' : ''} ${statusClass}`} onClick={() => !locked && onClick?.(match)} style={{ cursor: onClick && !locked ? 'pointer' : 'default' }}>
       <div className="fifa-card-header">
         <span className="fifa-card-round">{getGroupLabel(match)}</span>
-        {status === 'live' && <LiveTimer match={match} />}
-        {locked && <span className="fifa-card-lock-tag">🔒</span>}
+        {status === 'live' && <LiveTimer match={match} result={result} />}
+        {status === 'finished' && <span className="fifa-card-finished-tag">Encerrado</span>}
+        {locked && !result?.played && <span className="fifa-card-lock-tag">🔒</span>}
       </div>
 
       <div className="fifa-card-body">
         <div className="fifa-card-match-info">
           <span className="fifa-card-match-num">Match {match.id}</span>
-          {!result?.played && <CountdownLabel match={match} />}
+          {!result?.played && !result?.matchTime && <CountdownLabel match={match} />}
+          {matchLabel && <span className="fifa-card-status-label">{matchLabel}</span>}
           <span className="fifa-card-date">{match.date}</span>
           <span className="fifa-card-time">{match.time}</span>
         </div>
@@ -115,6 +161,15 @@ function FifaMatchCard({ match, result, prediction, onClick }) {
               {status !== 'scheduled' ? homeScore : '-'}
             </div>
           </div>
+          {homeGoals.length > 0 && (
+            <div className="fifa-card-goals home-goals">
+              {homeGoals.map((g, i) => (
+                <span key={i} className="goal-item" title={`${g.player} ${g.minute}'`}>
+                  ⚽ {g.player} {g.minute}'
+                </span>
+              ))}
+            </div>
+          )}
 
           <div className="fifa-card-team">
             <div className="fifa-card-team-logo">
@@ -125,6 +180,15 @@ function FifaMatchCard({ match, result, prediction, onClick }) {
               {status !== 'scheduled' ? awayScore : '-'}
             </div>
           </div>
+          {awayGoals.length > 0 && (
+            <div className="fifa-card-goals away-goals">
+              {awayGoals.map((g, i) => (
+                <span key={i} className="goal-item" title={`${g.player} ${g.minute}'`}>
+                  ⚽ {g.player} {g.minute}'
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="fifa-card-location">

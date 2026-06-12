@@ -1549,6 +1549,72 @@ body {
 
 .admin-clear-btn:hover { background: rgba(239, 83, 80, 0.15); }
 
+.admin-expand-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+}
+
+.admin-details {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-detail-row label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.admin-detail-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+
+.admin-detail-textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.admin-save-details-btn {
+  align-self: flex-end;
+  background: var(--green-light);
+  color: #fff;
+  border: none;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.admin-save-details-btn:hover { opacity: 0.85; }
+
 /* ==================== SYNC BUTTON ==================== */
 .admin-sync-bar {
   display: flex;
@@ -2327,6 +2393,52 @@ body {
   font-size: 0.85rem;
   opacity: 0.7;
 }
+
+.fifa-card-finished-tag {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--green-light);
+  background: rgba(76, 175, 80, 0.15);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.fifa-card-status-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--yellow);
+  margin-left: 4px;
+}
+
+.fifa-card-goals {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.fifa-card-goals.home-goals {
+  justify-content: flex-start;
+}
+
+.fifa-card-goals.away-goals {
+  justify-content: flex-end;
+}
+
+.goal-item {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.fifa-card.first-half .fifa-card-score-live { background: #e67e22; }
+.fifa-card.halftime .fifa-card-score-live { background: #3498db; }
+.fifa-card.second-half .fifa-card-score-live { background: #e74c3c; }
 
 .fifa-card-locked {
   filter: grayscale(0.7);

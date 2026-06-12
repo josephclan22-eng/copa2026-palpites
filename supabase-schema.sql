@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS match_results (
   home_score INTEGER,
   away_score INTEGER,
   played BOOLEAN DEFAULT false,
+  match_time TEXT DEFAULT '',
+  match_status INTEGER DEFAULT 1,
+  home_goals JSONB DEFAULT '[]',
+  away_goals JSONB DEFAULT '[]',
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 

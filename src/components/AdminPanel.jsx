@@ -193,11 +193,18 @@ function AdminUsers({ users, currentUser, setAdminStatus, removeUser, onResetAll
 function AdminMatchRow({ match, home, away, result, predCount, onUpdate, saveError }) {
   const [h, setH] = useState(result?.homeScore ?? '');
   const [a, setA] = useState(result?.awayScore ?? '');
+  const [expanded, setExpanded] = useState(false);
+  const [matchTime, setMatchTime] = useState(result?.matchTime || '');
+  const [homeGoals, setHomeGoals] = useState((result?.homeGoals || []).map(g => `${g.player}|${g.minute}`).join('\n'));
+  const [awayGoals, setAwayGoals] = useState((result?.awayGoals || []).map(g => `${g.player}|${g.minute}`).join('\n'));
   const locked = isMatchLocked(match);
 
   useEffect(() => {
     setH(result?.homeScore ?? '');
     setA(result?.awayScore ?? '');
+    setMatchTime(result?.matchTime || '');
+    setHomeGoals((result?.homeGoals || []).map(g => `${g.player}|${g.minute}`).join('\n'));
+    setAwayGoals((result?.awayGoals || []).map(g => `${g.player}|${g.minute}`).join('\n'));
   }, [result]);
 
   const isValidScore = (v) => v !== '' && !isNaN(Number(v)) && Number(v) >= 0;
@@ -231,6 +238,18 @@ function AdminMatchRow({ match, home, away, result, predCount, onUpdate, saveErr
     onUpdate(match.id, null, null);
   };
 
+  const handleSaveDetails = () => {
+    const parseGoals = (str) => str.split('\n').filter(Boolean).map(line => {
+      const [player, minute] = line.split('|');
+      return { player: player.trim(), minute: minute ? minute.trim() : '' };
+    });
+    onUpdate(match.id, h !== '' ? Number(h) : null, a !== '' ? Number(a) : null, {
+      matchTime,
+      homeGoals: parseGoals(homeGoals),
+      awayGoals: parseGoals(awayGoals),
+    });
+  };
+
   return (
     <div className={`admin-row ${result?.played ? 'has-result' : ''} ${locked ? 'admin-row-locked' : ''}`}>
       <div className="admin-match-info">
@@ -240,7 +259,9 @@ function AdminMatchRow({ match, home, away, result, predCount, onUpdate, saveErr
         <span className="admin-date">{match.date}</span>
         {predCount > 0 && <span className="admin-pred-count">{predCount} palpites</span>}
         {result?.played && <span className="admin-auto-saved">✅ Auto</span>}
+        {result?.matchTime && <span className="admin-auto-saved">⏱ {result.matchTime}</span>}
         {saveError && <span className="admin-save-error" title={saveError}>⚠️ Erro ao salvar</span>}
+        <button className="admin-expand-btn" onClick={() => setExpanded(!expanded)}>{expanded ? '▲' : '▼'}</button>
       </div>
 
       <div className="admin-teams">
@@ -276,6 +297,24 @@ function AdminMatchRow({ match, home, away, result, predCount, onUpdate, saveErr
         </div>
         <span className="admin-team"><img src={getFlagUrl(away?.code)} className="flag-img" alt="" /> {away?.name || match.awayTeam}</span>
       </div>
+
+      {expanded && (
+        <div className="admin-details">
+          <div className="admin-detail-row">
+            <label>Tempo (ex: 90', Intervalo, 45' 1ºT):</label>
+            <input type="text" value={matchTime} onChange={e => setMatchTime(e.target.value)} className="admin-detail-input" />
+          </div>
+          <div className="admin-detail-row">
+            <label>Gols {home?.name || 'Casa'} (um por linha: Jogador|min):</label>
+            <textarea value={homeGoals} onChange={e => setHomeGoals(e.target.value)} className="admin-detail-textarea" rows={3} />
+          </div>
+          <div className="admin-detail-row">
+            <label>Gols {away?.name || 'Fora'} (um por linha: Jogador|min):</label>
+            <textarea value={awayGoals} onChange={e => setAwayGoals(e.target.value)} className="admin-detail-textarea" rows={3} />
+          </div>
+          <button className="admin-save-details-btn" onClick={handleSaveDetails}>Salvar detalhes</button>
+        </div>
+      )}
 
       <div className="admin-actions">
         {!locked && result?.played && (

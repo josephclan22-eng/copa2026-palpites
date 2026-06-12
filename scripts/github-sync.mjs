@@ -59,9 +59,19 @@ async function run() {
     const dateStr = parseLocalDate(fm.LocalDate || fm.Date)
     const match = ourMatches.find(m => m.homeTeam === ourHome && m.awayTeam === ourAway && m.date === dateStr)
     if (!match) { console.log(`  Skip ${ourHome} vs ${ourAway} (${dateStr}): jogo nao encontrado no matches.js`); continue }
-    if (fm.HomeTeamScore === null || fm.AwayTeamScore === null) { console.log(`  Skip M${match.id} ${ourHome} vs ${ourAway}: sem placar ainda`); continue }
-    changes.push({ match_id: match.id, home_score: Number(fm.HomeTeamScore), away_score: Number(fm.AwayTeamScore), played: true, updated_at: new Date().toISOString() })
-    console.log(`  Match M${match.id}: ${ourHome} ${fm.HomeTeamScore}-${fm.AwayTeamScore} ${ourAway} -> salvo!`)
+    const hasScore = fm.HomeTeamScore !== null && fm.AwayTeamScore !== null
+    const isLive = fm.MatchStatus === 3 || (fm.MatchTime && !hasScore)
+    if (!hasScore && !isLive) { console.log(`  Skip M${match.id} ${ourHome} vs ${ourAway}: sem placar e nao ao vivo`); continue }
+    changes.push({
+      match_id: match.id,
+      home_score: hasScore ? Number(fm.HomeTeamScore) : null,
+      away_score: hasScore ? Number(fm.AwayTeamScore) : null,
+      played: hasScore,
+      match_time: fm.MatchTime || '',
+      match_status: fm.MatchStatus,
+      updated_at: new Date().toISOString(),
+    })
+    console.log(`  Match M${match.id}: ${ourHome} ${hasScore ? fm.HomeTeamScore+'-'+fm.AwayTeamScore : 'ao vivo'} ${ourAway} -> salvo!`)
   }
 
   if (changes.length > 0) {

@@ -4,3 +4,4 @@ dist/
 *.local
 *.sql
 *.txt
+.vercel

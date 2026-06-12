@@ -56,24 +56,31 @@ function App() {
 
   const [saveErrors, setSaveErrors] = useState({});
 
-  const handleUpdateResult = useCallback(async (matchId, homeScore, awayScore) => {
+  const handleUpdateResult = useCallback(async (matchId, homeScore, awayScore, extra = {}) => {
+    const hasScore = homeScore !== null && awayScore !== null;
     const newResults = {
       ...matchResults,
-      [matchId]: homeScore !== null && awayScore !== null
-        ? { homeScore: Number(homeScore), awayScore: Number(awayScore), played: true }
+      [matchId]: hasScore
+        ? { homeScore: Number(homeScore), awayScore: Number(awayScore), played: true, ...extra }
         : {},
     };
     setMatchResults(newResults);
 
-    if (homeScore !== null && awayScore !== null) {
-      const { error } = await supabase.from('match_results').upsert(
-        { match_id: Number(matchId), home_score: Number(homeScore), away_score: Number(awayScore), played: true },
-        { onConflict: 'match_id' }
-      );
-      if (error) {
-        setSaveErrors(e => ({ ...e, [matchId]: error.message }));
-        setTimeout(() => setSaveErrors(e => { const n = { ...e }; delete n[matchId]; return n; }), 4000);
-      }
+    const payload = { match_id: Number(matchId), updated_at: new Date().toISOString() };
+    if (hasScore) {
+      payload.home_score = Number(homeScore);
+      payload.away_score = Number(awayScore);
+      payload.played = true;
+    }
+    if (extra.matchTime !== undefined) payload.match_time = extra.matchTime;
+    if (extra.matchStatus !== undefined) payload.match_status = extra.matchStatus;
+    if (extra.homeGoals !== undefined) payload.home_goals = extra.homeGoals;
+    if (extra.awayGoals !== undefined) payload.away_goals = extra.awayGoals;
+
+    const { error } = await supabase.from('match_results').upsert(payload, { onConflict: 'match_id' });
+    if (error) {
+      setSaveErrors(e => ({ ...e, [matchId]: error.message }));
+      setTimeout(() => setSaveErrors(e => { const n = { ...e }; delete n[matchId]; return n; }), 4000);
     }
   }, [matchResults]);
 
@@ -84,7 +91,11 @@ function App() {
       if (data) {
         const results = {};
         for (const r of data) {
-          results[r.match_id] = { homeScore: r.home_score, awayScore: r.away_score, played: r.played };
+          results[r.match_id] = {
+            homeScore: r.home_score, awayScore: r.away_score, played: r.played,
+            matchTime: r.match_time, matchStatus: r.match_status,
+            homeGoals: r.home_goals, awayGoals: r.away_goals,
+          };
         }
         setMatchResults(results);
       }
