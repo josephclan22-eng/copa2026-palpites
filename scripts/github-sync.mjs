@@ -38,6 +38,32 @@ function parseLocalDate(str) {
   return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
+async function fetchMatchGoals(idMatch) {
+  try {
+    const res = await fetch(`https://api.fifa.com/api/v3/live/football/${idMatch}`)
+    if (!res.ok) return null
+    const data = await res.json()
+    const getNames = (players) => {
+      const map = {}
+      if (players) for (const p of players) {
+        const name = p.PlayerName?.[0]?.Description || p.ShortName?.[0]?.Description || ''
+        map[p.IdPlayer] = name
+      }
+      return map
+    }
+    const homePlayers = getNames(data.HomeTeam?.Players)
+    const awayPlayers = getNames(data.AwayTeam?.Players)
+    const parseGoals = (goals, playerMap) => (goals || []).map(g => ({
+      player: playerMap[g.IdPlayer] || `Player ${g.IdPlayer}`,
+      minute: g.Minute?.replace("'", '') || '',
+    }))
+    return {
+      homeGoals: parseGoals(data.HomeTeam?.Goals, homePlayers),
+      awayGoals: parseGoals(data.AwayTeam?.Goals, awayPlayers),
+    }
+  } catch { return null }
+}
+
 async function run() {
   const matchesPath = join(__dirname, '..', 'src', 'data', 'matches.js')
   const content = readFileSync(matchesPath, 'utf8')
@@ -62,7 +88,8 @@ async function run() {
     const hasScore = fm.HomeTeamScore !== null && fm.AwayTeamScore !== null
     const isLive = fm.MatchStatus === 3 || (fm.MatchTime && !hasScore)
     if (!hasScore && !isLive) { console.log(`  Skip M${match.id} ${ourHome} vs ${ourAway}: sem placar e nao ao vivo`); continue }
-    changes.push({
+
+    const entry = {
       match_id: match.id,
       home_score: hasScore ? Number(fm.HomeTeamScore) : null,
       away_score: hasScore ? Number(fm.AwayTeamScore) : null,
@@ -70,8 +97,19 @@ async function run() {
       match_time: fm.MatchTime || '',
       match_status: fm.MatchStatus,
       updated_at: new Date().toISOString(),
-    })
-    console.log(`  Match M${match.id}: ${ourHome} ${hasScore ? fm.HomeTeamScore+'-'+fm.AwayTeamScore : 'ao vivo'} ${ourAway} -> salvo!`)
+    }
+
+    if (hasScore && fm.IdMatch) {
+      const goals = await fetchMatchGoals(fm.IdMatch)
+      if (goals) {
+        entry.home_goals = goals.homeGoals
+        entry.away_goals = goals.awayGoals
+      }
+    }
+
+    changes.push(entry)
+    const goalInfo = entry.home_goals ? ` (${entry.home_goals.length + entry.away_goals.length} gols)` : ''
+    console.log(`  Match M${match.id}: ${ourHome} ${hasScore ? fm.HomeTeamScore+'-'+fm.AwayTeamScore : 'ao vivo'} ${ourAway} -> salvo!${goalInfo}`)
   }
 
   if (changes.length > 0) {
