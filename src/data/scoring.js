@@ -44,7 +44,8 @@ export function calculateAllPoints(predictions, matches) {
     userPoints[userId] = 0;
     userPreds.forEach(pred => {
       const match = matches.find(m => m.id === pred.matchId);
-      if (!match || !match.played) return;
+      if (!match) return;
+      if (match.homeScore === undefined || match.awayScore === undefined) return;
       userPoints[userId] += calculatePoints(pred, match);
     });
   });

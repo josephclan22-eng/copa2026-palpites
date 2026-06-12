@@ -252,7 +252,7 @@ export function useStorage() {
       const userPoints = {}
       for (const pred of allPredictions) {
         const actual = resultsMap[pred.match_id]
-        if (!actual?.played) continue
+        if (!actual || actual.homeScore === null || actual.awayScore === null) continue
         const pts = calculatePoints({ homeScore: pred.home_score, awayScore: pred.away_score }, actual)
         userPoints[pred.user_id] = (userPoints[pred.user_id] || 0) + pts
       }
