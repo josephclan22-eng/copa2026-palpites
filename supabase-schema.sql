@@ -50,6 +50,19 @@ CREATE POLICY "predictions_update_own" ON predictions FOR UPDATE USING (auth.uid
 
 CREATE POLICY "results_select_public" ON match_results FOR SELECT USING (true);
 
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  user_name TEXT NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "chat_select_public" ON chat_messages FOR SELECT USING (true);
+CREATE POLICY "chat_insert_auth" ON chat_messages FOR INSERT WITH CHECK (auth.uid() = user_id);
+
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN

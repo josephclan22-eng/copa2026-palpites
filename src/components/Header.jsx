@@ -120,8 +120,9 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
     { id: 'dashboard', icon: '📊', label: 'Painel' },
     { id: 'matches', icon: '⚽', label: 'Jogos' },
     { id: 'standings', icon: '📋', label: 'Grupos' },
-    { id: 'news', icon: '📰', label: 'Notícias' },
     { id: 'leaderboard', icon: '🏅', label: 'Ranking' },
+    { id: 'chat', icon: '💬', label: 'Resenha' },
+    { id: 'news', icon: '📰', label: 'Notícias' },
     ...(isAdmin ? [{ id: 'admin', icon: '⚙️', label: 'Admin' }] : []),
   ];
 

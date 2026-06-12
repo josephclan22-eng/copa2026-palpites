@@ -7,6 +7,7 @@ import Leaderboard from './components/Leaderboard';
 import AdminPanel from './components/AdminPanel';
 import StandingsTable from './components/StandingsTable';
 import News from './components/News';
+import Chat from './components/Chat';
 import initialMatches from './data/matches';
 import { resolveAllMatches } from './data/standings';
 import { useStorage } from './hooks/useStorage';
@@ -154,6 +155,8 @@ function App() {
             matches={initialMatches} matchResults={matchResults}
           />
         );
+      case 'chat':
+        return <Chat currentUser={curUser} users={users} />;
       case 'news':
         return <News />;
       case 'admin':
