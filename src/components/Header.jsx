@@ -7,6 +7,7 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
   const [mode, setMode] = useState('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -27,6 +28,7 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
   const resetForm = () => {
     setName('');
     setEmail('');
+    setLoginEmail('');
     setPassword('');
     setConfirmPassword('');
     setError('');
@@ -36,9 +38,9 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    if (!name.trim()) { setError('Digite seu nome'); return; }
+    if (!loginEmail.trim()) { setError('Digite seu email'); return; }
     if (!password) { setError('Digite sua senha'); return; }
-    const result = await onLogin(name.trim(), password);
+    const result = await onLogin(loginEmail.trim(), password);
     if (result?.error) { setError(result.error); return; }
     resetForm();
     setShowLogin(false);
@@ -112,7 +114,7 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
     setError('');
   };
 
-  const isAdmin = currentUser?.isAdmin;
+  const isAdmin = currentUser?.is_admin;
 
   const navItems = [
     { id: 'dashboard', icon: '📊', label: 'Painel' },
@@ -178,8 +180,8 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
                 <form className="login-form" onSubmit={handleLogin}>
                   <h4 className="login-title">Entrar</h4>
                   {error && <p className="login-error">{error}</p>}
-                  <input type="text" placeholder="Nome" value={name}
-                    onChange={(e) => setName(e.target.value)} autoFocus maxLength={30} className="login-input" />
+                  <input type="email" placeholder="Email" value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)} autoFocus className="login-input" />
                   <input type="password" placeholder="Senha" value={password}
                     onChange={(e) => setPassword(e.target.value)} className="login-input" />
                   <button type="submit" className="login-submit">Entrar</button>

@@ -1,5 +1,10 @@
 {
-  "build": {
-    "builder": "NIXPACKS"
-  }
+    "deploy":  {
+                   "restartPolicyType":  "ON_FAILURE",
+                   "startCommand":  "node server/index.js",
+                   "healthcheckPath":  "/api/health"
+               },
+    "build":  {
+                  "builder":  "NIXPACKS"
+              }
 }

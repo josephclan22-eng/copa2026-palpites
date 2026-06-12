@@ -10,7 +10,7 @@ import News from './components/News';
 import initialMatches from './data/matches';
 import { resolveAllMatches } from './data/standings';
 import { useStorage } from './hooks/useStorage';
-import { syncResults } from './services/api';
+import { supabase } from './lib/supabase';
 
 function App() {
   const [tab, setTab] = useState('dashboard');
@@ -48,12 +48,10 @@ function App() {
 
   useEffect(() => {
     loadServerData();
-    const interval = setInterval(loadServerData, 30000);
-    return () => clearInterval(interval);
-  }, [loadServerData]);
+  }, []);
 
   const curUser = getCurrentUser();
-  const isAdmin = curUser?.isAdmin;
+  const isAdmin = curUser?.is_admin;
   const canViewAdmin = isAdmin;
 
   const handleUpdateResult = useCallback(async (matchId, homeScore, awayScore) => {
@@ -64,37 +62,35 @@ function App() {
         : {},
     };
     setMatchResults(newResults);
-    try {
-      await fetch('/api/save-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminName: curUser?.name, results: newResults }),
-      });
-    } catch {}
-  }, [matchResults, curUser]);
+
+    if (homeScore !== null && awayScore !== null) {
+      await supabase.from('match_results').upsert(
+        { match_id: Number(matchId), home_score: Number(homeScore), away_score: Number(awayScore), played: true },
+        { onConflict: 'match_id' }
+      );
+    }
+  }, [matchResults]);
 
   const handleSyncResults = useCallback(async () => {
     setSyncState(s => ({ ...s, syncing: true, error: null }));
     try {
-      const data = await syncResults();
-      if (data && data.results && Object.keys(data.results).length > 0) {
-        setMatchResults(prev => {
-          const merged = { ...prev };
-          for (const [id, result] of Object.entries(data.results)) {
-            merged[id] = result;
-          }
-          return merged;
-        });
+      const { data } = await supabase.from('match_results').select('*');
+      if (data) {
+        const results = {};
+        for (const r of data) {
+          results[r.match_id] = { homeScore: r.home_score, awayScore: r.away_score, played: r.played };
+        }
+        setMatchResults(results);
       }
-      setSyncState({ syncing: false, lastSync: data?.lastSync || null, error: null });
-    } catch (err) {
-      setSyncState(s => ({ ...s, syncing: false, error: 'Servidor indisponível' }));
+      setSyncState({ syncing: false, lastSync: new Date().toISOString(), error: null });
+    } catch {
+      setSyncState(s => ({ ...s, syncing: false, error: 'Erro ao carregar resultados' }));
     }
   }, []);
 
   useEffect(() => {
     handleSyncResults();
-    const interval = setInterval(handleSyncResults, 1000);
+    const interval = setInterval(handleSyncResults, 2000);
     return () => clearInterval(interval);
   }, [handleSyncResults]);
 

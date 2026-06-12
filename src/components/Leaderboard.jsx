@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import React from 'react';
 import { calculateAllPoints, calculatePoints, getPointsLabel, getPointsColor } from '../data/scoring';
 import teams, { getFlagUrl } from '../data/teams';
 import Avatar from './Avatar';
@@ -83,8 +84,8 @@ function Leaderboard({ users, predictions, matches, matchResults, currentUser })
                 const isExpanded = expandedUser === userName;
 
                 return (
-                  <>
-                    <tr key={userName} className={`lb-row ${isMe ? 'is-me' : ''} ${i < 3 ? 'top-three' : ''} ${isExpanded ? 'lb-row-expanded' : ''}`}
+                  <React.Fragment key={userName}>
+                    <tr className={`lb-row ${isMe ? 'is-me' : ''} ${i < 3 ? 'top-three' : ''} ${isExpanded ? 'lb-row-expanded' : ''}`}
                       onClick={() => setExpandedUser(isExpanded ? null : userName)}
                     >
                       <td className="lb-pos">
@@ -107,7 +108,7 @@ function Leaderboard({ users, predictions, matches, matchResults, currentUser })
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr key={`${userName}-detail`} className="lb-detail-row">
+                      <tr className="lb-detail-row">
                         <td colSpan={7}>
                           <UserPredictionDetail
                             userName={userName}
@@ -118,7 +119,7 @@ function Leaderboard({ users, predictions, matches, matchResults, currentUser })
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>

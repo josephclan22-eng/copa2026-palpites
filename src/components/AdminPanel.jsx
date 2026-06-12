@@ -157,11 +157,11 @@ function AdminUsers({ users, currentUser, setAdminStatus, removeUser, onResetAll
                   {currentUser?.name === u.name ? (
                     <span className="admin-badge-static">Admin</span>
                   ) : (
-                    <label className="admin-toggle" title={u.isAdmin ? 'Remover admin' : 'Tornar admin'}>
+                    <label className="admin-toggle" title={u.is_admin ? 'Remover admin' : 'Tornar admin'}>
                       <input
                         type="checkbox"
-                        checked={!!u.isAdmin}
-                        onChange={() => setAdminStatus(currentUser?.name, u.name, !u.isAdmin)}
+                        checked={!!u.is_admin}
+                        onChange={() => setAdminStatus(currentUser?.name, u.name, !u.is_admin)}
                       />
                       <span className="admin-toggle-slider"></span>
                     </label>

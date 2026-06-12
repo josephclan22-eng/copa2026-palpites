@@ -1,16 +1,16 @@
-import express from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { config } from 'dotenv'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+config({ path: join(__dirname, '..', '.env') })
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY
 const supabase = createClient(supabaseUrl || '', supabaseKey || '')
 
-const PORT = process.env.PORT || 3001
 const FIFA_API = 'https://api.fifa.com/api/v3/calendar/matches?idCompetition=17&idSeason=285023&language=en&count=200'
 
 const FIFA_TO_OURS = {
@@ -35,17 +35,21 @@ function parseLocalDate(str) {
   return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-async function syncFifa() {
+async function fetchFifaData() {
+  const res = await fetch(FIFA_API)
+  if (!res.ok) throw new Error(`FIFA API returned ${res.status}`)
+  return res.json()
+}
+
+async function refreshSync() {
   try {
     const matchesPath = join(__dirname, '..', 'src', 'data', 'matches.js')
-    const content = readFileSync(matchesPath, 'utf8')
-    const arr = content.match(/\[[\s\S]*\]/)?.[0]
-    if (!arr) return
-    const ourMatches = eval(`(${arr})`)
+    const matchesContent = readFileSync(matchesPath, 'utf8')
+    const matchExport = matchesContent.match(/\[[\s\S]*\]/)?.[0]
+    if (!matchExport) throw new Error('Could not parse matches file')
+    const ourMatches = eval(`(${matchExport})`)
 
-    const res = await fetch(FIFA_API)
-    if (!res.ok) return
-    const data = await res.json()
+    const data = await fetchFifaData()
     const changes = []
 
     for (const fm of data.Results) {
@@ -54,31 +58,33 @@ async function syncFifa() {
       const ourHome = FIFA_TO_OURS[homeCode]
       const ourAway = FIFA_TO_OURS[awayCode]
       if (!ourHome || !ourAway) continue
+
       const dateStr = parseLocalDate(fm.LocalDate || fm.Date)
       const match = ourMatches.find(m => m.homeTeam === ourHome && m.awayTeam === ourAway && m.date === dateStr)
-      if (!match || fm.HomeTeamScore === null || fm.AwayTeamScore === null) continue
-      changes.push({ match_id: match.id, home_score: Number(fm.HomeTeamScore), away_score: Number(fm.AwayTeamScore), played: true, updated_at: new Date().toISOString() })
+      if (!match) continue
+      if (fm.HomeTeamScore === null || fm.AwayTeamScore === null) continue
+
+      changes.push({
+        match_id: match.id,
+        home_score: Number(fm.HomeTeamScore),
+        away_score: Number(fm.AwayTeamScore),
+        played: true,
+        updated_at: new Date().toISOString(),
+      })
     }
 
     if (changes.length > 0) {
-      await supabase.from('match_results').upsert(changes, { onConflict: 'match_id' })
-      console.log(`[${new Date().toLocaleTimeString('pt-BR')}] Sync: ${changes.length} resultados`)
+      const { error } = await supabase.from('match_results').upsert(changes, { onConflict: 'match_id' })
+      if (error) {
+        console.error('Erro ao salvar no Supabase:', error.message)
+      } else {
+        console.log(`[${new Date().toLocaleTimeString('pt-BR')}] Sync FIFA: ${changes.length} resultados atualizados`)
+      }
     }
-  } catch {}
+  } catch (err) {
+    console.error('Erro no sync:', err.message)
+  }
 }
 
-const app = express()
-
-app.get('/api/sync', async (req, res) => {
-  await syncFifa()
-  res.json({ success: true })
-})
-
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true, time: new Date().toISOString() })
-})
-
-syncFifa()
-setInterval(syncFifa, 120000)
-
-app.listen(PORT, () => console.log(`Sync server on port ${PORT}`))
+refreshSync()
+setInterval(refreshSync, 2000)
