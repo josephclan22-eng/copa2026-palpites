@@ -38,7 +38,7 @@ function parseLocalDate(str) {
   return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-async function fetchMatchGoals(idMatch) {
+async function fetchMatchDetails(idMatch) {
   try {
     const res = await fetch(`https://api.fifa.com/api/v3/live/football/${idMatch}`)
     if (!res.ok) return null
@@ -56,12 +56,81 @@ async function fetchMatchGoals(idMatch) {
     const parseGoals = (goals, playerMap) => (goals || []).map(g => ({
       player: playerMap[g.IdPlayer] || `Player ${g.IdPlayer}`,
       minute: g.Minute?.replace("'", '') || '',
+      type: g.Type,
+    }))
+    const parseCards = (bookings, playerMap) => (bookings || []).map(b => ({
+      player: playerMap[b.IdPlayer] || '',
+      minute: b.Minute?.replace("'", '') || '',
+      card: b.Card,
+      teamId: b.IdTeam,
     }))
     return {
       homeGoals: parseGoals(data.HomeTeam?.Goals, homePlayers),
       awayGoals: parseGoals(data.AwayTeam?.Goals, awayPlayers),
+      homeCards: parseCards(data.HomeTeam?.Bookings, homePlayers),
+      awayCards: parseCards(data.AwayTeam?.Bookings, awayPlayers),
+      matchTime: data.MatchTime || '',
+      matchStatus: data.MatchStatus,
+      period: data.Period,
+      homeTeamId: data.HomeTeam?.IdTeam,
+      awayTeamId: data.AwayTeam?.IdTeam,
     }
   } catch { return null }
+}
+
+async function reportMatchEvents(match, details, fifaMatch) {
+  const teamsModule = await import('../src/data/teams.js')
+  const teams = teamsModule.default
+  const homeTeam = teams[match.homeTeam]
+  const awayTeam = teams[match.awayTeam]
+  const homeName = homeTeam?.name || match.homeTeam
+  const awayName = awayTeam?.name || match.awayTeam
+  const key = `events_M${match.id}`
+
+  const { data: existing } = await supabase.from('chat_messages').select('message').ilike('message', `${key}%`).limit(1).maybeSingle()
+  let reported = existing ? parseInt(existing.message.match(/reported=(\d+)/)?.[1] || '0') : 0
+
+  const homeG = details.homeGoals || []
+  const awayG = details.awayGoals || []
+  const homeC = details.homeCards || []
+  const awayC = details.awayCards || []
+  const totalEvents = homeG.length + awayG.length + homeC.length + awayC.length
+
+  if (totalEvents === reported) return
+
+  if (totalEvents > reported) {
+    let msg = ''
+    const newEvents = totalEvents - reported
+    if (newEvents === 1 && totalEvents === 1) {
+      if (homeG.length > 0 && reported < 1) {
+        const g = homeG[0]
+        msg = `⚽ GOL! ${homeName} ${g.minute}' — ${g.player}`
+      } else if (awayG.length > 0) {
+        const g = awayG[0]
+        msg = `⚽ GOL! ${awayName} ${g.minute}' — ${g.player}`
+      }
+    } else {
+      const allNew = []
+      for (let i = reported; i < homeG.length; i++) allNew.push(`⚽ ${homeName} — ${homeG[i].player} ${homeG[i].minute}'`)
+      for (let i = reported; i < awayG.length; i++) allNew.push(`⚽ ${awayName} — ${awayG[i].player} ${awayG[i].minute}'`)
+      for (let i = reported; i < homeC.length; i++) {
+        const c = homeC[i]
+        allNew.push(`${c.card === 2 ? '🟥' : '🟨'} ${homeName} — ${c.player || 'Jogador'} ${c.minute}'${c.card === 2 ? ' (EXPULSO)' : ''}`)
+      }
+      for (let i = reported; i < awayC.length; i++) {
+        const c = awayC[i]
+        allNew.push(`${c.card === 2 ? '🟥' : '🟨'} ${awayName} — ${c.player || 'Jogador'} ${c.minute}'${c.card === 2 ? ' (EXPULSO)' : ''}`)
+      }
+      msg = allNew.slice(0, 3).join('\n')
+    }
+
+    if (msg) {
+      const status = details.matchStatus === 0 ? '🏁 Fim de jogo' : details.period === 3 ? `1ºT ${details.matchTime}` : details.period === 5 ? `2ºT ${details.matchTime}` : `⏱ ${details.matchTime}`
+      const full = `${homeName} ${fifaMatch.HomeTeamScore ?? '?'} x ${fifaMatch.AwayTeamScore ?? '?'} ${awayName}\n${status}\n${msg}\n[${key} reported=${totalEvents}]`
+      await sendReminder(full)
+      console.log(`  Reporter M${match.id}: ${newEvents} novo(s) evento(s)`)
+    }
+  }
 }
 
 function getTodayStr() {
@@ -177,11 +246,12 @@ async function run() {
       updated_at: new Date().toISOString(),
     }
 
-    if (fm.IdMatch) {
-      const goals = await fetchMatchGoals(fm.IdMatch)
-      if (goals) {
-        entry.home_goals = goals.homeGoals
-        entry.away_goals = goals.awayGoals
+    if (fm.IdMatch && hasScore) {
+      const details = await fetchMatchDetails(fm.IdMatch)
+      if (details) {
+        entry.home_goals = details.homeGoals
+        entry.away_goals = details.awayGoals
+        await reportMatchEvents(match, details, fm)
       }
     }
 
