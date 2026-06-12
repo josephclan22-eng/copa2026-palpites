@@ -54,6 +54,8 @@ function App() {
   const isAdmin = curUser?.is_admin;
   const canViewAdmin = isAdmin;
 
+  const [saveErrors, setSaveErrors] = useState({});
+
   const handleUpdateResult = useCallback(async (matchId, homeScore, awayScore) => {
     const newResults = {
       ...matchResults,
@@ -64,10 +66,14 @@ function App() {
     setMatchResults(newResults);
 
     if (homeScore !== null && awayScore !== null) {
-      await supabase.from('match_results').upsert(
+      const { error } = await supabase.from('match_results').upsert(
         { match_id: Number(matchId), home_score: Number(homeScore), away_score: Number(awayScore), played: true },
         { onConflict: 'match_id' }
       );
+      if (error) {
+        setSaveErrors(e => ({ ...e, [matchId]: error.message }));
+        setTimeout(() => setSaveErrors(e => { const n = { ...e }; delete n[matchId]; return n; }), 4000);
+      }
     }
   }, [matchResults]);
 
@@ -152,6 +158,7 @@ function App() {
             syncState={syncState} onSync={handleSyncResults}
             setAdminStatus={setAdminStatus} removeUser={removeUser}
             onResetAll={() => resetAll(curUser?.name)} currentUser={curUser}
+            saveErrors={saveErrors}
           />
         );
       default:

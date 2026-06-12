@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import teams, { groups, stageLabels, getFlagUrl } from '../data/teams';
 import { isMatchLocked } from '../utils/lock';
 
-function AdminPanel({ matches, matchResults, onUpdateResult, users, predictions, syncState, onSync, setAdminStatus, removeUser, onResetAll, currentUser }) {
+function AdminPanel({ matches, matchResults, onUpdateResult, users, predictions, syncState, onSync, setAdminStatus, removeUser, onResetAll, currentUser, saveErrors = {} }) {
   const [adminTab, setAdminTab] = useState('jogos');
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedStage, setSelectedStage] = useState('');
@@ -81,6 +81,7 @@ function AdminPanel({ matches, matchResults, onUpdateResult, users, predictions,
                   result={result}
                   predCount={getPredictionCount(m.id)}
                   onUpdate={onUpdateResult}
+                  saveError={saveErrors[m.id]}
                 />
               );
             })}
@@ -189,7 +190,7 @@ function AdminUsers({ users, currentUser, setAdminStatus, removeUser, onResetAll
   );
 }
 
-function AdminMatchRow({ match, home, away, result, predCount, onUpdate }) {
+function AdminMatchRow({ match, home, away, result, predCount, onUpdate, saveError }) {
   const [h, setH] = useState(result?.homeScore ?? '');
   const [a, setA] = useState(result?.awayScore ?? '');
   const locked = isMatchLocked(match);
@@ -239,6 +240,7 @@ function AdminMatchRow({ match, home, away, result, predCount, onUpdate }) {
         <span className="admin-date">{match.date}</span>
         {predCount > 0 && <span className="admin-pred-count">{predCount} palpites</span>}
         {result?.played && <span className="admin-auto-saved">✅ Auto</span>}
+        {saveError && <span className="admin-save-error" title={saveError}>⚠️ Erro ao salvar</span>}
       </div>
 
       <div className="admin-teams">
