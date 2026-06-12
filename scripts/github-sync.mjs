@@ -212,6 +212,56 @@ async function sendMatchReminders(ourMatches) {
   }
 }
 
+async function handleBotCommands(ourMatches) {
+  const { data: cmds } = await supabase.from('chat_messages').select('id, message, user_name').ilike('message', '!bot%').limit(5).order('created_at', { ascending: false })
+  if (!cmds || cmds.length === 0) return
+
+  for (const cmd of cmds) {
+    if (cmd.message !== '!bot' && !cmd.message.startsWith('!bot ')) continue
+    const { data: replied } = await supabase.from('chat_messages').select('id').ilike('message', `%re:${cmd.id}%`).limit(1).maybeSingle()
+    if (replied) continue
+
+    const teamsModule = await import('../src/data/teams.js')
+    const teams = teamsModule.default
+    const today = getTodayStr()
+    const now = Date.now()
+
+    let reply = `📋 **PROGRAMAÇÃO DA COPA**\n\n`
+
+    const todayMatches = ourMatches.filter(m => m.date === today && m.stage === 'group')
+    if (todayMatches.length > 0) {
+      reply += `📅 **HOJE (${today}):**\n`
+      for (const match of todayMatches) {
+        const home = teams[match.homeTeam]
+        const away = teams[match.awayTeam]
+        const diff = getMatchTimestamp(match) - now
+        const status = diff < 0 ? '🔴 AO VIVO' : diff < 3600000 ? `⏰ Em ${Math.floor(diff/60000)}min` : `🕐 ${match.time}`
+        reply += `${status} — ${home?.name || match.homeTeam} x ${away?.name || match.awayTeam} (${match.venue})\n`
+      }
+    } else {
+      reply += '📅 Nenhum jogo hoje.\n'
+    }
+
+    const upcoming = ourMatches.filter(m => m.stage === 'group').filter(m => {
+      const diff = getMatchTimestamp(m) - now
+      return diff > 0 && m.date !== today
+    }).slice(0, 5)
+
+    if (upcoming.length > 0) {
+      reply += `\n📆 **PRÓXIMOS JOGOS:**\n`
+      for (const match of upcoming) {
+        const home = teams[match.homeTeam]
+        const away = teams[match.awayTeam]
+        reply += `📌 ${match.date} ${match.time} — ${home?.name || match.homeTeam} x ${away?.name || match.awayTeam}\n`
+      }
+    }
+
+    reply += `\n💡 Use o menu Jogos para ver todos os jogos e fazer palpites! [re:${cmd.id}]`
+    await sendReminder(reply)
+    console.log(`  !bot respondido para ${cmd.user_name}`)
+  }
+}
+
 async function run() {
   const matchesPath = join(__dirname, '..', 'src', 'data', 'matches.js')
   const content = readFileSync(matchesPath, 'utf8')
@@ -268,6 +318,7 @@ async function run() {
     console.log('Sync: nenhum resultado novo')
   }
 
+  await handleBotCommands(ourMatches)
   await sendMatchReminders(ourMatches)
 }
 
