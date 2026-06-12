@@ -9,20 +9,16 @@ function getGroupLabel(match) {
 
 function getMatchStatus(match, result) {
   if (result?.played) return 'finished';
-  if (result && result.homeScore !== undefined && result.awayScore !== undefined) return 'finished';
-  if (result?.matchTime) return 'live';
+  if (result?.matchStatus === 0) return 'finished';
+  if (result?.matchTime || result?.matchStatus === 3) return 'live';
   if (isMatchLocked(match)) return 'live';
   return 'scheduled';
 }
 
 function getMatchLabel(result) {
   if (!result) return null;
-  if (result.played) return 'Encerrado';
+  if (result.played || result.matchStatus === 0) return 'Encerrado';
   const t = result.matchTime || '';
-  if (t.includes('+')) {
-    const mins = parseInt(t);
-    return mins >= 45 ? '2º Tempo' : '1º Tempo';
-  }
   const mins = parseInt(t);
   if (isNaN(mins)) return 'Ao Vivo';
   if (mins <= 45) return `1ºT ${mins}'`;
@@ -86,31 +82,15 @@ function LiveTimer({ match, result }) {
 
   useEffect(() => {
     if (result?.matchTime) {
-      const t = result.matchTime;
-      if (t === 'Interval') { setLabel('Intervalo'); return; }
-      const mins = parseInt(t);
-      if (!isNaN(mins)) {
-        if (mins <= 45) { setLabel(`${mins}' 1ºT`); return; }
-        if (mins <= 60) { setLabel(`Intervalo`); return; }
-        setLabel(`${mins}' 2ºT`);
-        return;
-      }
-      setLabel(`Ao Vivo`);
+      setLabel(result.matchTime);
       return;
     }
 
     function tick() {
       const remaining = getLockTimeRemaining(match);
       const elapsed = Math.abs(Math.min(remaining, 0));
-      if (elapsed < 90) {
-        setLabel(`${elapsed}' 1ºT`);
-      } else if (elapsed < 105) {
-        setLabel(`90' 2ºT`);
-      } else if (elapsed < 120) {
-        setLabel(`90' ${Math.min(elapsed - 90, 30)}' 2ºT`);
-      } else {
-        setLabel(`90' 2ºT`);
-      }
+      if (elapsed < 90) { setLabel(`${elapsed}'`); return; }
+      setLabel(`90'+${Math.min(elapsed - 90, 30)}`);
     }
 
     tick();
