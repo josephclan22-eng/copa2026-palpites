@@ -40,10 +40,8 @@ function Chat({ currentUser, users }) {
     e.preventDefault();
     setError('');
     if (!text.trim() || !currentUser) return;
-    if (containsProfanity(text)) {
-      setError('Mensagem bloqueada: conteúdo impróprio detectado.');
-      return;
-    }
+    try { if (containsProfanity(text)) { setError('Mensagem bloqueada: conteúdo impróprio detectado.'); return; } }
+    catch { setError('Erro ao verificar mensagem.'); return; }
     const msg = {
       user_id: currentUser.id,
       user_name: currentUser.name,
@@ -51,7 +49,9 @@ function Chat({ currentUser, users }) {
       created_at: new Date().toISOString(),
     };
     const { error: err } = await supabase.from('chat_messages').insert([msg]);
-    if (err) setError('Erro ao enviar. Tente novamente.');
+    if (err) setError(err.message === 'relation "chat_messages" does not exist'
+      ? 'Chat não configurado. Rode o SQL no Supabase.'
+      : err.message);
     else setText('');
   }
 
