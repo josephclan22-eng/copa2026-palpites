@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import Avatar from './Avatar';
+import { containsProfanity } from '../utils/profanity';
 
 function Chat({ currentUser, users }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -36,15 +38,21 @@ function Chat({ currentUser, users }) {
 
   async function sendMessage(e) {
     e.preventDefault();
+    setError('');
     if (!text.trim() || !currentUser) return;
+    if (containsProfanity(text)) {
+      setError('Mensagem bloqueada: conteúdo impróprio detectado.');
+      return;
+    }
     const msg = {
       user_id: currentUser.id,
       user_name: currentUser.name,
       message: text.trim(),
       created_at: new Date().toISOString(),
     };
-    await supabase.from('chat_messages').insert([msg]);
-    setText('');
+    const { error: err } = await supabase.from('chat_messages').insert([msg]);
+    if (err) setError('Erro ao enviar. Tente novamente.');
+    else setText('');
   }
 
   return (
@@ -80,17 +88,20 @@ function Chat({ currentUser, users }) {
       </div>
 
       {currentUser ? (
-        <form className="chat-input-area" onSubmit={sendMessage}>
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Manda a resenha..."
-            maxLength={500}
-            className="chat-input"
-          />
-          <button type="submit" className="chat-send-btn" disabled={!text.trim()}>Enviar</button>
-        </form>
+        <>
+          {error && <div className="chat-error">{error}</div>}
+          <form className="chat-input-area" onSubmit={sendMessage}>
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => { setText(e.target.value); setError(''); }}
+              placeholder="Manda a resenha..."
+              maxLength={500}
+              className="chat-input"
+            />
+            <button type="submit" className="chat-send-btn" disabled={!text.trim()}>Enviar</button>
+          </form>
+        </>
       ) : (
         <div className="chat-login-prompt">
           <p>Faça login para participar da resenha!</p>
