@@ -55,9 +55,11 @@ function Chat({ currentUser, users }) {
 
   if (loading) return (
     <div className="chat-page">
-      <div className="chat-header">
-        <h2>💬 Resenha</h2>
-        <p className="chat-subtitle">Resenha liberada! Manda tua opinião sobre a Copa 2026</p>
+      <div className="chat-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2>💬 Resenha</h2>
+          <p className="chat-subtitle">Resenha liberada! Manda tua opinião sobre a Copa 2026</p>
+        </div>
       </div>
       <p className="empty-msg" style={{ padding: 40, textAlign: 'center' }}>Carregando...</p>
     </div>
@@ -65,15 +67,26 @@ function Chat({ currentUser, users }) {
 
   return (
     <div className="chat-page">
-      <div className="chat-header">
-        <h2>💬 Resenha</h2>
-        <p className="chat-subtitle">Resenha liberada! Manda tua opinião sobre a Copa 2026</p>
+      <div className="chat-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2>💬 Resenha</h2>
+          <p className="chat-subtitle">Resenha liberada! Manda tua opinião sobre a Copa 2026</p>
+        </div>
+        <button onClick={loadMessages} style={{ background: 'var(--green-brasil)', color: 'white', border: 'none', borderRadius: 4, padding: '4px 10px', fontSize: '0.7rem', cursor: 'pointer' }}>Recarregar</button>
       </div>
 
       <div className="chat-messages">
         {messages.length === 0 && (
           <p className="empty-msg" style={{ padding: 40, textAlign: 'center' }}>Nenhuma mensagem ainda. Seja o primeiro!</p>
         )}
+        <div className="chat-msg">
+          <div className="chat-msg-body" style={{ background: 'rgba(255,215,0,0.15)', border: '1px solid gold' }}>
+            <div className="chat-msg-head">
+              <span className="chat-msg-name" style={{ color: 'gold' }}>Sistema</span>
+            </div>
+            <div className="chat-msg-text">Chat ativo! {messages.length} mensagens carregadas.</div>
+          </div>
+        </div>
         {messages.map((msg) => (
           <div key={msg.id} className={`chat-msg ${currentUser?.id === msg.user_id ? 'chat-msg-own' : ''}`}>
             <Avatar user={users.find(u => u.id === msg.user_id) || { name: msg.user_name }} size={28} />
