@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
@@ -17,6 +17,26 @@ function App() {
   const [tab, setTab] = useState('dashboard');
   const [matchResults, setMatchResults] = useState({});
   const [syncState, setSyncState] = useState({ syncing: false, lastSync: null, error: null });
+  const [chatUnread, setChatUnread] = useState(0);
+  const chatLastId = useRef(0);
+  const chatTabActive = useRef(false);
+
+  useEffect(() => {
+    chatTabActive.current = tab === 'chat';
+    if (tab === 'chat') setChatUnread(0);
+  }, [tab]);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (chatTabActive.current) return;
+      const { data } = await supabase.from('chat_messages').select('id').order('id', { ascending: false }).limit(1);
+      if (data && data[0] && data[0].id > chatLastId.current) {
+        if (chatLastId.current === 0) chatLastId.current = data[0].id;
+        else setChatUnread(prev => prev + 1);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -192,6 +212,7 @@ function App() {
         onUpdateProfile={updateProfile}
         tab={effectiveTab}
         onTabChange={setTab}
+        chatUnread={chatUnread}
       />
       <main className="main-content">
         {renderTab()}

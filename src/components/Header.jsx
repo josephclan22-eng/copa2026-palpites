@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { validateEmailDomain } from '../utils/email';
 import Avatar from './Avatar';
 
-function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, tab, onTabChange }) {
+function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, tab, onTabChange, chatUnread = 0 }) {
   const [showLogin, setShowLogin] = useState(false);
   const [mode, setMode] = useState('login');
   const [name, setName] = useState('');
@@ -234,7 +234,12 @@ function Header({ currentUser, onLogin, onRegister, onLogout, onUpdateProfile, t
             className={`nav-btn ${tab === item.id ? 'active' : ''}`}
             onClick={() => onTabChange(item.id)}
           >
-            <span className="nav-icon">{item.icon}</span>
+            <span className="nav-icon">
+              {item.icon}
+              {item.id === 'chat' && chatUnread > 0 && (
+                <span className="chat-badge">{chatUnread}</span>
+              )}
+            </span>
             <span className="nav-label">{item.label}</span>
           </button>
         ))}

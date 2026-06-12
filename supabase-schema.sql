@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "chat_select_public" ON chat_messages FOR SELECT USING (true);
-CREATE POLICY "chat_insert_auth" ON chat_messages FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "chat_insert_all" ON chat_messages FOR INSERT WITH CHECK (true);
 
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
