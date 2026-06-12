@@ -64,6 +64,85 @@ async function fetchMatchGoals(idMatch) {
   } catch { return null }
 }
 
+function getTodayStr() {
+  const now = new Date()
+  return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+function getMatchTimestamp(match) {
+  const [day, month] = match.date.split('/')
+  const [hour, minute] = match.time.split(':')
+  return new Date(2026, parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute)).getTime()
+}
+
+let botUserId = null
+
+async function getBotUserId() {
+  if (botUserId) return botUserId
+  const { data } = await supabase.from('profiles').select('id').limit(1)
+  if (data && data[0]) botUserId = data[0].id
+  return botUserId
+}
+
+async function sendReminder(msg) {
+  const uid = await getBotUserId()
+  if (!uid) { console.error('Nenhum usuario encontrado para enviar lembrete'); return }
+  const { error } = await supabase.from('chat_messages').insert({
+    user_id: uid,
+    user_name: '🤖 Bot da Copa',
+    message: msg,
+    created_at: new Date().toISOString(),
+  })
+  if (error) console.error('Erro ao enviar lembrete:', error.message)
+}
+
+async function sendMatchReminders(ourMatches) {
+  const today = getTodayStr()
+  const now = Date.now()
+  const teamsModule = await import('../src/data/teams.js')
+  const teams = teamsModule.default
+
+  const todayMatches = ourMatches.filter(m => m.date === today && m.stage === 'group')
+  if (todayMatches.length === 0) return
+
+  for (const match of todayMatches) {
+    const diff = getMatchTimestamp(match) - now
+    const minsUntil = Math.floor(diff / 60000)
+
+    if (minsUntil > 25 && minsUntil < 35) {
+      const home = teams[match.homeTeam]
+      const away = teams[match.awayTeam]
+      const homeName = home?.name || match.homeTeam
+      const awayName = away?.name || match.awayTeam
+      const key = `reminder_30min_M${match.id}`
+      const { data: existing } = await supabase.from('chat_messages').select('id').ilike('message', `${key}%`).limit(1).maybeSingle()
+      if (!existing) {
+        await sendReminder(`🔔 LEMBRETE | ${homeName} 🆚 ${awayName}\n⚽ FALTAM 30 MINUTOS!\n⏰ ${match.time} | ${match.venue}\n📝 Corre fazer teu palpite! [${key}]`)
+        console.log(`  Lembrete 30min: M${match.id} ${homeName} vs ${awayName}`)
+      }
+    }
+  }
+
+  const key = `daily_reminder_${today}`
+  const { data: existing } = await supabase.from('chat_messages').select('id').ilike('message', `${key}%`).limit(1).maybeSingle()
+  if (!existing && todayMatches.length > 0) {
+    let msg = `📅 RODADA DE HOJE (${today}):\n`
+    for (const match of todayMatches) {
+      const home = teams[match.homeTeam]
+      const away = teams[match.awayTeam]
+      const homeName = home?.name || match.homeTeam
+      const awayName = away?.name || match.awayTeam
+      const diff = getMatchTimestamp(match) - now
+      const status = diff < 0 ? '🔴 AO VIVO' : diff < 3600000 ? `⏰ Em ${Math.floor(diff/60000)}min` : `🕐 ${match.time}`
+      msg += `\n${status} — ${homeName} x ${awayName}`
+    }
+    msg += '\n\n🎯 Faça seus palpites!'
+    msg += ` [${key}]`
+    await sendReminder(msg)
+    console.log(`  Lembrete diario: ${todayMatches.length} jogos hoje`)
+  }
+}
+
 async function run() {
   const matchesPath = join(__dirname, '..', 'src', 'data', 'matches.js')
   const content = readFileSync(matchesPath, 'utf8')
@@ -118,6 +197,8 @@ async function run() {
   } else {
     console.log('Sync: nenhum resultado novo')
   }
+
+  await sendMatchReminders(ourMatches)
 }
 
 run().catch(err => { console.error(err.message); process.exit(1) })
