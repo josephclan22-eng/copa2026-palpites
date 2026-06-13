@@ -13,7 +13,7 @@ export function calculateGroupStandings(matches, matchResults) {
 
   for (const m of groupMatches) {
     const result = matchResults[m.id];
-    if (!result?.played) continue;
+    if (!result || result.homeScore == null || result.awayScore == null) continue;
 
     const home = groups[m.group][m.homeTeam];
     const away = groups[m.group][m.awayTeam];
