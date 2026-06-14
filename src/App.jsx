@@ -136,7 +136,7 @@ function App() {
 
   useEffect(() => {
     handleSyncResults();
-    const interval = setInterval(handleSyncResults, 30000);
+    const interval = setInterval(handleSyncResults, 2000);
     return () => clearInterval(interval);
   }, [handleSyncResults]);
 
