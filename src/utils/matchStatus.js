@@ -9,12 +9,12 @@ export function getMatchStatus(match, matchResult) {
   const start = getMatchTimestamp(match)
   const elapsed = (now - start) / 60000
 
-  if (matchResult?.match_status === 0) {
+  if (matchResult?.matchStatus === 0) {
     return { phase: 'finished', label: 'Encerrado', elapsed: null }
   }
 
-  if (matchResult?.match_status === 3 && matchResult?.match_time) {
-    const raw = matchResult.match_time.replace(/'/g, '').trim()
+  if (matchResult?.matchStatus === 3 && matchResult?.matchTime) {
+    const raw = matchResult.matchTime.replace(/'/g, '').trim()
     const mins = parseInt(raw)
     if (!isNaN(mins)) {
       const half = mins <= 45 ? '1ºT' : '2ºT'

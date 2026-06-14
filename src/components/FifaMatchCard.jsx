@@ -91,7 +91,7 @@ function FifaMatchCard({ match, result, prediction, onClick }) {
   const awayName = getTeamName(match.awayTeam);
   const locked = !result?.played && isMatchLocked(match);
   const isLive = status.phase === 'live' || status.phase === 'live_local' || status.phase === 'first_half' || status.phase === 'second_half' || status.phase === 'halftime';
-  const showScore = result?.match_status === 0 || result?.match_status === 3 || result?.played;
+  const showScore = result?.matchStatus === 0 || result?.matchStatus === 3 || result?.played;
   const homeGoals = result?.homeGoals || [];
   const awayGoals = result?.awayGoals || [];
   const statusClass = getStatusClass(result);
