@@ -141,7 +141,7 @@ function App() {
   }, [handleSyncResults]);
 
   useEffect(() => {
-    const interval = setInterval(recalculateAllPoints, 60000);
+    const interval = setInterval(recalculateAllPoints, 2000);
     return () => clearInterval(interval);
   }, [recalculateAllPoints]);
 
