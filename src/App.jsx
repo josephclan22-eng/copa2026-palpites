@@ -73,6 +73,8 @@ function App() {
 
   useEffect(() => {
     loadServerData();
+    const interval = setInterval(loadServerData, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const curUser = getCurrentUser();
@@ -134,9 +136,14 @@ function App() {
 
   useEffect(() => {
     handleSyncResults();
-    const interval = setInterval(handleSyncResults, 2000);
+    const interval = setInterval(handleSyncResults, 30000);
     return () => clearInterval(interval);
   }, [handleSyncResults]);
+
+  useEffect(() => {
+    const interval = setInterval(recalculateAllPoints, 60000);
+    return () => clearInterval(interval);
+  }, [recalculateAllPoints]);
 
   const effectiveTab = !canViewAdmin && tab === 'admin' ? 'dashboard' : tab;
 

@@ -1,30 +1,11 @@
 import { useState, useEffect } from 'react';
 import teams, { stageLabels } from '../data/teams';
 import { isMatchLocked, getLockTimeRemaining } from '../utils/lock';
+import { getMatchStatus } from '../utils/matchStatus';
 
 function getGroupLabel(match) {
   if (match.stage === 'group') return `Grupo ${match.group}`;
   return stageLabels[match.stage] || match.stage || 'Group Stage';
-}
-
-function getMatchStatus(match, result) {
-  if (!result) return 'scheduled';
-  if (result.played) return 'finished';
-  if (result.matchStatus === 0) return 'finished';
-  if ((result.matchTime || result.matchStatus === 3) && result.homeScore != null && result.awayScore != null) return 'live';
-  if (isMatchLocked(match)) return 'live';
-  return 'scheduled';
-}
-
-function getMatchLabel(result) {
-  if (!result) return null;
-  if (result.played || result.matchStatus === 0) return 'Encerrado';
-  const t = result.matchTime || '';
-  const mins = parseInt(t);
-  if (isNaN(mins)) return 'Ao Vivo';
-  if (mins <= 45) return `1ºT ${mins}'`;
-  if (mins <= 60) return `Intervalo`;
-  return `2ºT ${mins}'`;
 }
 
 function getTeamName(teamKey) {
@@ -109,67 +90,71 @@ function FifaMatchCard({ match, result, prediction, onClick }) {
   const homeName = getTeamName(match.homeTeam);
   const awayName = getTeamName(match.awayTeam);
   const locked = !result?.played && isMatchLocked(match);
-  const matchLabel = getMatchLabel(result);
-  const statusClass = getStatusClass(result);
+  const isLive = status.phase === 'live' || status.phase === 'live_local' || status.phase === 'first_half' || status.phase === 'second_half' || status.phase === 'halftime';
+  const showScore = result?.match_status === 0 || result?.match_status === 3 || result?.played;
   const homeGoals = result?.homeGoals || [];
   const awayGoals = result?.awayGoals || [];
+  const statusClass = getStatusClass(result);
 
   return (
-    <div className={`fifa-card ${locked ? 'fifa-card-locked' : ''} ${statusClass}`} onClick={() => !locked && onClick?.(match)} style={{ cursor: onClick && !locked ? 'pointer' : 'default' }}>
+    <div className={`fifa-card ${locked ? 'fifa-card-locked' : ''} ${isLive ? 'fifa-card-live' : ''} ${statusClass}`} onClick={() => !locked && !isLive && onClick?.(match)} style={{ cursor: onClick && !locked && !isLive ? 'pointer' : 'default' }}>
       <div className="fifa-card-header">
         <span className="fifa-card-round">{getGroupLabel(match)}</span>
-        {status === 'live' && <LiveTimer match={match} result={result} />}
-        {status === 'finished' && <span className="fifa-card-finished-tag">Encerrado</span>}
+        {isLive && <LiveTimer match={match} result={result} />}
+        {status.phase === 'finished' && <span className="fifa-card-finished-tag">Encerrado</span>}
         {locked && !result?.played && <span className="fifa-card-lock-tag">🔒</span>}
       </div>
 
       <div className="fifa-card-body">
         <div className="fifa-card-match-info">
           <span className="fifa-card-match-num">Match {match.id}</span>
-          {!result?.played && !result?.matchTime && <CountdownLabel match={match} />}
-          {matchLabel && <span className="fifa-card-status-label">{matchLabel}</span>}
-          <span className="fifa-card-date">{match.date}</span>
-          <span className="fifa-card-time">{match.time}</span>
+          {!result?.played && !isLive && <CountdownLabel match={match} />}
+          {!isLive && <span className="fifa-card-date">{match.date}</span>}
+          {!isLive && <span className="fifa-card-time">{match.time}</span>}
         </div>
 
         <div className="fifa-card-teams">
           <div className="fifa-card-team">
-            <div className="fifa-card-team-logo">
-              <img src={getBadgeUrl(match.homeTeam)} alt={homeName} loading="lazy" />
+            <div className="fifa-card-team-row">
+              <div className="fifa-card-team-logo">
+                <img src={getBadgeUrl(match.homeTeam)} alt={homeName} loading="lazy" />
+              </div>
+              <span className="fifa-card-team-name">{homeName}</span>
+              <div className={`fifa-card-score ${isLive ? 'fifa-card-score-live' : ''}`}>
+                {showScore ? homeScore : '-'}
+              </div>
             </div>
-            <span className="fifa-card-team-name">{homeName}</span>
-            <div className={`fifa-card-score ${status === 'live' ? 'fifa-card-score-live' : ''}`}>
-              {status !== 'scheduled' ? homeScore : '-'}
-            </div>
+            {homeGoals.length > 0 && (
+              <div className="fifa-card-goals home-goals">
+                {homeGoals.map((g, i) => (
+                  <span key={i} className="goal-item" title={`${g.player} ${g.minute}'`}>
+                    ⚽ {g.player} {g.minute}'
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-          {homeGoals.length > 0 && (
-            <div className="fifa-card-goals home-goals">
-              {homeGoals.map((g, i) => (
-                <span key={i} className="goal-item" title={`${g.player} ${g.minute}'`}>
-                  ⚽ {g.player} {g.minute}'
-                </span>
-              ))}
-            </div>
-          )}
 
           <div className="fifa-card-team">
-            <div className="fifa-card-team-logo">
-              <img src={getBadgeUrl(match.awayTeam)} alt={awayName} loading="lazy" />
+            <div className="fifa-card-team-row">
+              <div className="fifa-card-team-logo">
+                <img src={getBadgeUrl(match.awayTeam)} alt={awayName} loading="lazy" />
+              </div>
+              <span className="fifa-card-team-name">{awayName}</span>
+              <div className={`fifa-card-score ${isLive ? 'fifa-card-score-live' : ''}`}>
+                {showScore ? awayScore : '-'}
+              </div>
             </div>
-            <span className="fifa-card-team-name">{awayName}</span>
-            <div className={`fifa-card-score ${status === 'live' ? 'fifa-card-score-live' : ''}`}>
-              {status !== 'scheduled' ? awayScore : '-'}
-            </div>
+            {awayGoals.length > 0 && (
+              <div className="fifa-card-goals away-goals">
+                {awayGoals.map((g, i) => (
+                  <span key={i} className="goal-item" title={`${g.player} ${g.minute}'`}>
+                    ⚽ {g.player} {g.minute}'
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-          {awayGoals.length > 0 && (
-            <div className="fifa-card-goals away-goals">
-              {awayGoals.map((g, i) => (
-                <span key={i} className="goal-item" title={`${g.player} ${g.minute}'`}>
-                  ⚽ {g.player} {g.minute}'
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="fifa-card-location">
@@ -180,7 +165,7 @@ function FifaMatchCard({ match, result, prediction, onClick }) {
           <span>{match.venue}</span>
         </div>
 
-        {prediction && !result?.played && (
+        {prediction && !result?.played && !isLive && (
           <div className="fifa-card-prediction">
             Seu palpite: {prediction.homeScore} x {prediction.awayScore}
           </div>

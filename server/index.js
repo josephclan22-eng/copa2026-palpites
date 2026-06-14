@@ -30,9 +30,9 @@ const FIFA_TO_OURS = {
 
 function parseLocalDate(str) {
   const parts = str.slice(0, 10).split('-')
-  if (parts.length === 3) return `${parts[2]}/${parts[1]}`
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`
   const d = new Date(str)
-  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
 }
 
 async function syncFifa() {
@@ -54,10 +54,19 @@ async function syncFifa() {
       const ourHome = FIFA_TO_OURS[homeCode]
       const ourAway = FIFA_TO_OURS[awayCode]
       if (!ourHome || !ourAway) continue
-      const dateStr = parseLocalDate(fm.LocalDate || fm.Date)
+      const dateStr = parseLocalDate(fm.Date)
       const match = ourMatches.find(m => m.homeTeam === ourHome && m.awayTeam === ourAway && m.date === dateStr)
-      if (!match || fm.HomeTeamScore === null || fm.AwayTeamScore === null) continue
-      changes.push({ match_id: match.id, home_score: Number(fm.HomeTeamScore), away_score: Number(fm.AwayTeamScore), played: true, updated_at: new Date().toISOString() })
+      if (!match) continue
+      const ms = Number(fm.MatchStatus)
+      changes.push({
+        match_id: match.id,
+        home_score: fm.HomeTeamScore !== null ? Number(fm.HomeTeamScore) : null,
+        away_score: fm.AwayTeamScore !== null ? Number(fm.AwayTeamScore) : null,
+        match_status: isNaN(ms) ? 1 : ms,
+        match_time: fm.MatchTime || '',
+        played: ms === 0,
+        updated_at: new Date().toISOString(),
+      })
     }
 
     if (changes.length > 0) {

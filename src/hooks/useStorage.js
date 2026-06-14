@@ -17,7 +17,7 @@ export function useStorage() {
     const { data: profiles } = await supabase.from('profiles').select('*')
     const { data: preds } = await supabase.from('predictions').select('*')
 
-    const users = profiles || []
+    const users = (profiles || []).map(p => ({ ...p, profilePhoto: p.profile_photo }))
     const predictions = {}
     if (preds) {
       for (const p of preds) {
@@ -46,7 +46,7 @@ export function useStorage() {
       .single()
 
     if (profile) {
-      const user = { ...profile, id: session.user.id, email: session.user.email }
+      const user = { ...profile, id: session.user.id, email: session.user.email, profilePhoto: profile.profile_photo }
       setData(prev => ({ ...prev, currentUser: user }))
     }
 
@@ -65,13 +65,14 @@ export function useStorage() {
         .single()
 
       const user = profile
-        ? { ...profile, id: data.user.id, email: data.user.email }
+        ? { ...profile, id: data.user.id, email: data.user.email, profilePhoto: profile.profile_photo }
         : { id: data.user.id, name: email.split('@')[0], email }
 
       setData(prev => ({ ...prev, currentUser: user }))
       await loadAllData()
       return { ok: true, user }
-    } catch {
+    } catch (err) {
+      console.error('login error:', err)
       return { ok: false, error: 'Servidor indisponível' }
     }
   }, [])
@@ -84,28 +85,41 @@ export function useStorage() {
       })
       if (error) return { ok: false, error: error.message }
 
-      let profile
-      for (let i = 0; i < 15; i++) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', authData.user.id).single()
-        if (data) { profile = data; break }
-        await new Promise(r => setTimeout(r, 500))
+      if (!authData.user) return { ok: false, error: 'Erro ao criar usuário' }
+
+      const userId = authData.user.id
+
+      let profile = null
+      if (authData.session) {
+        for (let i = 0; i < 20; i++) {
+          const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+          if (data) { profile = data; break }
+          await new Promise(r => setTimeout(r, i < 10 ? 500 : 1000))
+        }
       }
 
       if (!profile) {
-        const { data: inserted } = await supabase.from('profiles').insert([{
-          id: authData.user.id, name, email, gender, is_admin: false,
-        }]).select().single()
-        profile = inserted
+        try {
+          const { data: inserted, error: insertErr } = await supabase.from('profiles').insert([{
+            id: userId, name, email, gender, is_admin: false,
+          }]).select().single()
+          if (insertErr) {
+            const { data: retryProfile } = await supabase.from('profiles').select('*').eq('id', userId).single()
+            profile = retryProfile || { id: userId, name, email, gender, is_admin: false }
+          } else {
+            profile = inserted
+          }
+        } catch {
+          profile = { id: userId, name, email, gender, is_admin: false }
+        }
       }
 
-      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-      if (loginError) return { ok: false, error: loginError.message }
-
-      const user = { ...profile, id: authData.user.id, email: authData.user.email }
+      const user = { ...profile, id: userId, email, profilePhoto: profile.profile_photo || null }
       setData(prev => ({ ...prev, currentUser: user }))
       await loadAllData()
       return { ok: true, user }
-    } catch {
+    } catch (err) {
+      console.error('register error:', err)
       return { ok: false, error: 'Servidor indisponível' }
     }
   }, [])
@@ -154,7 +168,7 @@ export function useStorage() {
         ...prev,
         predictions: { ...prev.predictions, [storageKey]: userPreds },
       }))
-    } catch {}
+    } catch (err) { console.error('addPrediction error:', err) }
   }, [data.predictions, data.currentUser])
 
   const getPrediction = useCallback((userName, matchId) => {
@@ -177,7 +191,8 @@ export function useStorage() {
         users: prev.users.map(u => u.name === targetName ? { ...u, is_admin: isAdmin } : u),
       }))
       return { success: true }
-    } catch {
+    } catch (err) {
+      console.error('setAdminStatus error:', err)
       return { success: false, error: 'Servidor indisponível' }
     }
   }, [data.users])
@@ -199,7 +214,8 @@ export function useStorage() {
         }
       })
       return { success: true }
-    } catch {
+    } catch (err) {
+      console.error('removeUser error:', err)
       return { success: false, error: 'Servidor indisponível' }
     }
   }, [data.users, data.predictions])
@@ -215,10 +231,12 @@ export function useStorage() {
       await supabase.from('profiles').update(dbUpdates).eq('id', user.id)
       setData(prev => ({
         ...prev,
-        users: prev.users.map(u => u.name === userName ? { ...u, ...dbUpdates } : u),
+        users: prev.users.map(u => u.name === userName ? { ...u, ...dbUpdates, profilePhoto: u.profile_photo || u.profilePhoto } : u),
+        currentUser: prev.currentUser?.name === userName ? { ...prev.currentUser, ...dbUpdates, profilePhoto: dbUpdates.profile_photo || prev.currentUser.profilePhoto } : prev.currentUser,
       }))
       return { ok: true }
-    } catch {
+    } catch (err) {
+      console.error('updateProfile error:', err)
       return { ok: false, error: 'Servidor indisponível' }
     }
   }, [data.users])
@@ -227,10 +245,11 @@ export function useStorage() {
     try {
       await supabase.from('predictions').delete().neq('id', 0)
       await supabase.from('match_results').delete().neq('id', 0)
-      await supabase.from('profiles').delete().neq('id', '0')
+      await supabase.from('profiles').delete().neq('id', 0)
       setData({ users: [], predictions: {}, currentUser: null })
       return { success: true }
-    } catch {
+    } catch (err) {
+      console.error('resetAll error:', err)
       return { success: false }
     }
   }, [])
@@ -260,7 +279,7 @@ export function useStorage() {
       for (const profile of allProfiles) {
         await supabase.from('profiles').update({ total_points: userPoints[profile.id] || 0 }).eq('id', profile.id)
       }
-    } catch {}
+    } catch (err) { console.error('recalculateAllPoints error:', err) }
   }, [])
 
   useEffect(() => {

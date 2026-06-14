@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(process.env.VITE_SUPABASE_URL || '', process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '')
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''
+)
 
 const FIFA_API = 'https://api.fifa.com/api/v3/calendar/matches?idCompetition=17&idSeason=285023&language=en&count=200'
 
@@ -21,9 +24,9 @@ const FIFA_TO_OURS = {
 
 function parseLocalDate(str) {
   const parts = str.slice(0, 10).split('-')
-  if (parts.length === 3) return `${parts[2]}/${parts[1]}`
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`
   const d = new Date(str)
-  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
 }
 
 export default async (req, res) => {
@@ -44,7 +47,7 @@ export default async (req, res) => {
       const ourHome = FIFA_TO_OURS[homeCode]
       const ourAway = FIFA_TO_OURS[awayCode]
       if (!ourHome || !ourAway) continue
-      const dateStr = parseLocalDate(fm.LocalDate || fm.Date)
+      const dateStr = parseLocalDate(fm.Date)
       const match = ourMatches.find(m => m.homeTeam === ourHome && m.awayTeam === ourAway && m.date === dateStr)
       if (!match || fm.HomeTeamScore === null || fm.AwayTeamScore === null) continue
 

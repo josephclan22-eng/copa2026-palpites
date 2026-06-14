@@ -2644,6 +2644,41 @@ body {
   50% { opacity: 0.6; }
 }
 
+.fifa-card-live-tag.live {
+  background: #e67e22;
+  animation: fifaLivePulse 1s ease-in-out infinite;
+}
+
+.fifa-card-live-tag.halftime {
+  background: #f1c40f;
+  color: #1a1a2e;
+  animation: none;
+}
+
+.fifa-card-live-tag.finished {
+  background: #555;
+  animation: none;
+}
+
+.fifa-card-live {
+  border-color: #e67e22 !important;
+  box-shadow: 0 0 12px rgba(230, 126, 34, 0.3) !important;
+}
+
+.fifa-card-live .fifa-card-score-live {
+  color: #e67e22 !important;
+  font-weight: 800 !important;
+}
+
+.fifa-card-goal {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  padding-left: 44px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .fifa-card-lock-tag {
   margin-left: auto;
   font-size: 0.85rem;
@@ -2750,6 +2785,12 @@ body {
 }
 
 .fifa-card-team {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.fifa-card-team-row {
   display: flex;
   align-items: center;
   gap: 12px;
