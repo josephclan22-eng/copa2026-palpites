@@ -29,9 +29,8 @@ const FIFA_TO_OURS = {
 }
 
 function parseLocalDate(str) {
-  const parts = str.slice(0, 10).split('-')
-  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`
   const d = new Date(str)
+  d.setHours(d.getHours() - 3)
   return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
 }
 
