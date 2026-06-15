@@ -114,7 +114,7 @@ function App() {
   const handleSyncResults = useCallback(async () => {
     setSyncState(s => ({ ...s, syncing: true, error: null }));
     try {
-      fetch('/api/sync-fifa').catch(() => {});
+      await fetch('/api/sync-fifa').catch(() => {});
       const { data } = await supabase.from('match_results').select('*');
       if (data) {
         const results = {};
