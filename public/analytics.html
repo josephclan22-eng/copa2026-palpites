@@ -217,7 +217,7 @@ tr:hover td { background:rgba(255,255,255,0.02) }
 <script>
 const SUPABASE_URL = 'https://mbsqfytzpqlpxtfkwmos.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ic3FmeXR6cHFscHh0Zmt3bW9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTU4NzUsImV4cCI6MjA5Njc5MTg3NX0';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const MATCHES = [
   {id:1,group:'A',date:'11/06',home:'MEXICO',away:'AFRICA_SUL'},
@@ -378,9 +378,9 @@ function buildStandings(matchResults) {
 }
 
 async function loadData() {
-  const { data: results } = await supabase.from('match_results').select('*').order('match_id');
-  const { data: predictions } = await supabase.from('predictions').select('*');
-  const { data: profiles } = await supabase.from('profiles').select('*').order('total_points', { ascending: false });
+  const { data: results } = await sb.from('match_results').select('*').order('match_id');
+  const { data: predictions } = await sb.from('predictions').select('*');
+  const { data: profiles } = await sb.from('profiles').select('*').order('total_points', { ascending: false });
   
   const resultMap = {};
   (results || []).forEach(r => resultMap[r.match_id] = r);
@@ -607,3 +607,4 @@ loadData();
 </script>
 </body>
 </html>
+
