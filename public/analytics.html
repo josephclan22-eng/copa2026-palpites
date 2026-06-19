@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Copa 2026 • Central Analítica</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
 :root {
@@ -215,9 +214,7 @@ tr:hover td { background:rgba(255,255,255,0.02) }
 </div>
 
 <script>
-const SUPABASE_URL = 'https://mbsqfytzpqlpxtfkwmos.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ic3FmeXR6cHFscHh0Zmt3bW9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTU4NzUsImV4cCI6MjA5Njc5MTg3NX0';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let EMBEDDED_DATA = null;
 
 const MATCHES = [
   {id:1,group:'A',date:'11/06',home:'MEXICO',away:'AFRICA_SUL'},
@@ -378,15 +375,19 @@ function buildStandings(matchResults) {
 }
 
 async function loadData() {
-  const { data: results } = await sb.from('match_results').select('*').order('match_id');
-  const { data: predictions } = await sb.from('predictions').select('*');
-  const { data: profiles } = await sb.from('profiles').select('*').order('total_points', { ascending: false });
+  if (!EMBEDDED_DATA) {
+    const res = await fetch('copa-data.json');
+    EMBEDDED_DATA = await res.json();
+  }
+  const results = EMBEDDED_DATA.results || [];
+  const predictions = EMBEDDED_DATA.predictions || [];
+  const profiles = EMBEDDED_DATA.profiles || [];
   
   const resultMap = {};
-  (results || []).forEach(r => resultMap[r.match_id] = r);
+  results.forEach(r => resultMap[r.match_id] = r);
 
-  renderStandings(resultMap, results || []);
-  renderDashboard(profiles || [], predictions || [], resultMap);
+  renderStandings(resultMap, results);
+  renderDashboard(profiles, predictions, resultMap);
   renderScorers(results || []);
   renderPredictions(profiles || [], predictions || [], resultMap);
 }
