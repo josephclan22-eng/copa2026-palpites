@@ -345,7 +345,7 @@ function getFlag(code) { return `https://flagcdn.com/w20/${code}.png`; }
 
 function buildStandings(matchResults) {
   const groups = {};
-  const groupMatches = MATCHES.filter(m => m.group && m.stage === 'group');
+  const groupMatches = MATCHES.filter(m => m.group);
   
   groupMatches.forEach(m => {
     if (!groups[m.group]) groups[m.group] = {};
@@ -608,6 +608,7 @@ loadData();
 </script>
 </body>
 </html>
+
 
 
 
