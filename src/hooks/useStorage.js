@@ -258,7 +258,11 @@ export function useStorage() {
     await loadAndSyncUser()
   }, [loadAndSyncUser])
 
+  const recalculatingRef = useRef(false)
+
   const recalculateAllPoints = useCallback(async () => {
+    if (recalculatingRef.current) return
+    recalculatingRef.current = true
     try {
       const { data: allPredictions } = await supabase.from('predictions').select('*')
       const { data: matchResults } = await supabase.from('match_results').select('*')
@@ -280,6 +284,7 @@ export function useStorage() {
         await supabase.from('profiles').update({ total_points: userPoints[profile.id] || 0 }).eq('id', profile.id)
       }
     } catch (err) { console.error('recalculateAllPoints error:', err) }
+    finally { recalculatingRef.current = false }
   }, [])
 
   useEffect(() => {
