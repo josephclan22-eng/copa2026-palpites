@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copa 2026 • Central Analítica</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+:root {
+  --bg: #0a0e14;
+  --card: #131820;
+  --border: #1e2736;
+  --gold: #c8a84e;
+  --green: #00c853;
+  --red: #ff1744;
+  --blue: #2196f3;
+  --text: #e0e0e0;
+  --muted: #8a94a6;
+  --accent: #ff6d00;
+}
+* { margin:0; padding:0; box-sizing:border-box }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; overflow-x:hidden }
+body::before {
+  content:''; position:fixed; top:0; left:0; width:100%; height:100%;
+  background: radial-gradient(ellipse at 20% 0%, rgba(200,168,78,0.06) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 100%, rgba(33,150,243,0.04) 0%, transparent 60%);
+  pointer-events:none; z-index:0;
+}
+
+/* HEADER */
+header {
+  position:sticky; top:0; z-index:100;
+  background:linear-gradient(180deg, rgba(10,14,20,0.98) 60%, rgba(10,14,20,0.85));
+  backdrop-filter:blur(12px); border-bottom:1px solid var(--border); padding:16px 24px;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+}
+.logo { display:flex; align-items:center; gap:12px }
+.logo-icon { width:40px; height:40px; background:linear-gradient(135deg,var(--gold),#b8942e); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px }
+.logo h1 { font-size:20px; font-weight:700 }
+.logo span { color:var(--gold) }
+.logo p { font-size:11px; color:var(--muted); margin-top:2px }
+.live-indicator { display:flex; align-items:center; gap:8px; background:#132010; border:1px solid #1a3a1a; padding:6px 14px; border-radius:20px; font-size:12px; color:var(--green) }
+.live-dot { width:8px; height:8px; background:var(--green); border-radius:50%; animation:pulse 2s infinite }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* TABS */
+nav { display:flex; gap:4px; padding:12px 24px; background:var(--card); border-bottom:1px solid var(--border); position:relative; z-index:1 }
+.tab { padding:10px 24px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:500; color:var(--muted); border:none; background:transparent; transition:all 0.2s; white-space:nowrap }
+.tab:hover { color:var(--text); background:rgba(255,255,255,0.03) }
+.tab.active { background:var(--gold); color:#0a0e14; font-weight:700 }
+
+/* CONTAINER */
+.container { max-width:1600px; margin:0 auto; padding:20px 24px; position:relative; z-index:1 }
+.tab-content { display:none }
+.tab-content.active { display:block }
+
+/* KPI CARDS */
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:16px; margin-bottom:24px }
+.kpi-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px; position:relative; overflow:hidden }
+.kpi-card::after { content:''; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--gold); border-radius:4px 0 0 4px }
+.kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); margin-bottom:8px }
+.kpi-value { font-size:36px; font-weight:800; line-height:1 }
+.kpi-sub  { font-size:12px; color:var(--muted); margin-top:6px }
+.kpi-card.green::after { background:var(--green) }
+.kpi-card.red::after { background:var(--red) }
+.kpi-card.blue::after { background:var(--blue) }
+.kpi-card.orange::after { background:var(--accent) }
+
+/* TABLES */
+.table-wrap { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; margin-bottom:20px }
+.table-title { padding:16px 20px; font-size:16px; font-weight:700; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px }
+table { width:100%; border-collapse:collapse; font-size:13px }
+th { text-align:left; padding:12px 16px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border) }
+td { padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.03) }
+tr:hover td { background:rgba(255,255,255,0.02) }
+.team-cell { display:flex; align-items:center; gap:8px }
+.team-cell img { width:22px; height:22px; border-radius:4px; object-fit:contain }
+.pts { font-weight:800; font-size:15px }
+.gd-positive { color:var(--green) }
+.gd-negative { color:var(--red) }
+.pos { width:32px; text-align:center; font-weight:700 }
+.pos-1 { color:var(--gold) }
+.pos-2 { color:#b0bec5 }
+.pos-3 { color:#a1887f }
+.qualified { border-left:3px solid var(--green) }
+.playoff { border-left:3px solid var(--accent) }
+
+/* GROUP SECTION */
+.group-section { margin-bottom:20px }
+.group-header { padding:12px 20px; background:linear-gradient(135deg,rgba(200,168,78,0.1),transparent); border-radius:12px 12px 0 0; font-size:15px; font-weight:700; border:1px solid var(--border); border-bottom:none }
+.group-badge { display:inline-block; padding:2px 10px; border-radius:4px; font-size:10px; font-weight:700; margin-left:8px }
+.group-badge.done { background:var(--green); color:#000 }
+.group-badge.active { background:var(--accent); color:#000 }
+
+/* CHARTS SECTION */
+.charts-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(400px,1fr)); gap:20px; margin-bottom:20px }
+.chart-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px }
+.chart-card h3 { font-size:14px; margin-bottom:16px; display:flex; align-items:center; gap:8px }
+.chart-wrap { position:relative; height:280px }
+.chart-wrap canvas { width:100% !important }
+
+/* TOP SCORERS */
+.scorer-card { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.03) }
+.scorer-rank { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; background:rgba(200,168,78,0.15); color:var(--gold) }
+.scorer-rank.top { background:var(--gold); color:#000 }
+.scorer-name { flex:1; font-weight:600 }
+.scorer-team { font-size:11px; color:var(--muted) }
+.scorer-goals { font-weight:800; font-size:18px; color:var(--gold) }
+
+/* ACCURACY BAR */
+.accuracy-bar { height:8px; border-radius:4px; background:rgba(255,255,255,0.05); margin-top:4px; overflow:hidden }
+.accuracy-fill { height:100%; border-radius:4px; transition:width 1s ease }
+
+/* RESPONSIVE */
+@media(max-width:768px) {
+  .kpi-grid { grid-template-columns:repeat(2,1fr) }
+  .charts-grid { grid-template-columns:1fr }
+  header { padding:12px 16px }
+  .logo h1 { font-size:16px }
+}
+
+/* ANIMATIONS */
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
+.animate { animation:fadeUp 0.6s ease forwards }
+.animate:nth-child(1) { animation-delay:0s }
+.animate:nth-child(2) { animation-delay:0.1s }
+.animate:nth-child(3) { animation-delay:0.2s }
+.animate:nth-child(4) { animation-delay:0.3s }
+
+/* PREDICTION ACCURACY TABLE */
+.accuracy-excellent { color:var(--green); font-weight:700 }
+.accuracy-good { color:#69f0ae }
+.accuracy-avg { color:#ffab40 }
+.accuracy-bad { color:var(--red) }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🏆</div>
+    <div>
+      <h1>Copa <span>2026</span></h1>
+      <p>Central Analítica • Bolão de Palpites</p>
+    </div>
+  </div>
+  <div class="live-indicator">
+    <div class="live-dot"></div>
+    Dados em tempo real
+  </div>
+</header>
+
+<nav>
+  <button class="tab active" onclick="switchTab('standings')">📊 Classificação</button>
+  <button class="tab" onclick="switchTab('dashboard')">📈 Dashboard KPIs</button>
+  <button class="tab" onclick="switchTab('scorers')">⚽ Artilharia</button>
+  <button class="tab" onclick="switchTab('predictions')">🎯 Análise de Palpites</button>
+</nav>
+
+<div class="container">
+
+<!-- TAB: CLASSIFICAÇÃO -->
+<div id="standings" class="tab-content active">
+  <div class="kpi-grid">
+    <div class="kpi-card animate"><div class="kpi-label">Total de Jogos</div><div class="kpi-value" id="kpi-matches">-</div><div class="kpi-sub">Grupos + Mata-mata</div></div>
+    <div class="kpi-card green animate"><div class="kpi-label">Jogos Realizados</div><div class="kpi-value" id="kpi-played">-</div><div class="kpi-sub" id="kpi-played-sub"></div></div>
+    <div class="kpi-card orange animate"><div class="kpi-label">Total de Gols</div><div class="kpi-value" id="kpi-goals">-</div><div class="kpi-sub" id="kpi-goals-sub"></div></div>
+    <div class="kpi-card blue animate"><div class="kpi-label">Média de Gols</div><div class="kpi-value" id="kpi-avg">-</div><div class="kpi-sub">por partida</div></div>
+  </div>
+  <div id="standings-container"></div>
+</div>
+
+<!-- TAB: DASHBOARD -->
+<div id="dashboard" class="tab-content">
+  <div class="kpi-grid">
+    <div class="kpi-card animate"><div class="kpi-label">Participantes</div><div class="kpi-value" id="dash-users">-</div></div>
+    <div class="kpi-card green animate"><div class="kpi-label">Palpites Registrados</div><div class="kpi-value" id="dash-preds">-</div></div>
+    <div class="kpi-card orange animate"><div class="kpi-label">Taxa de Acerto</div><div class="kpi-value" id="dash-accuracy">-</div><div class="kpi-sub">palpites com pontuação > 0</div></div>
+    <div class="kpi-card blue animate"><div class="kpi-label">Placar Exato</div><div class="kpi-value" id="dash-exact">-</div><div class="kpi-sub">15 pontos</div></div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card"><h3>📊 Distribuição de Pontos por Usuário</h3><div class="chart-wrap"><canvas id="chartPoints"></canvas></div></div>
+    <div class="chart-card"><h3>⚽ Gols por Grupo</h3><div class="chart-wrap"><canvas id="chartGoalsGroup"></canvas></div></div>
+  </div>
+
+  <div class="table-wrap"><div class="table-title">📋 Análise por Seleção</div>
+    <div style="overflow-x:auto"><table id="team-analysis-table"><thead><tr><th>Seleção</th><th>Grupo</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>Pts</th><th>Aprov.</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<!-- TAB: ARTILHARIA -->
+<div id="scorers" class="tab-content">
+  <div class="charts-grid">
+    <div class="chart-card"><h3>🏅 Top 20 Artilheiros</h3><div id="scorers-list"></div></div>
+    <div class="chart-card"><h3>📊 Gols por Minuto</h3><div class="chart-wrap"><canvas id="chartMinutes"></canvas></div></div>
+  </div>
+  <div class="table-wrap"><div class="table-title">⚽ Todos os Gols da Copa</div>
+    <div style="overflow-x:auto"><table id="all-goals-table"><thead><tr><th>#</th><th>Jogador</th><th>Seleção</th><th>Minuto</th><th>Partida</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<!-- TAB: ANÁLISE DE PALPITES -->
+<div id="predictions" class="tab-content">
+  <div class="table-wrap"><div class="table-title">🎯 Ranking de Precisão dos Participantes</div>
+    <div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Participante</th><th>Pts</th><th>Placar Exato (15)</th><th>Vencedor+Dif (10)</th><th>Vencedor (7)</th><th>1 Time (5)</th><th>Aprox (2)</th><th>Erros (0)</th><th>Precisão</th><th>Pontos/Jogo</th></tr></thead><tbody id="accuracy-table"></tbody></table></div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><h3>📈 Evolução de Pontos</h3><div class="chart-wrap"><canvas id="chartEvo"></canvas></div></div>
+    <div class="chart-card"><h3>🎯 Distribuição de Acertos por Tipo</h3><div class="chart-wrap"><canvas id="chartTypes"></canvas></div></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://mbsqfytzpqlpxtfkwmos.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ic3FmeXR6cHFscHh0Zmt3bW9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTU4NzUsImV4cCI6MjA5Njc5MTg3NX0';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const MATCHES = [
+  {id:1,group:'A',date:'11/06',home:'MEXICO',away:'AFRICA_SUL'},
+  {id:2,group:'A',date:'11/06',home:'COREIA_SUL',away:'REP_TCHECA'},
+  {id:3,group:'B',date:'12/06',home:'CANADA',away:'BOSNIA'},
+  {id:4,group:'D',date:'12/06',home:'USA',away:'PARAGUAI'},
+  {id:5,group:'B',date:'13/06',home:'CATAR',away:'SUICA'},
+  {id:6,group:'C',date:'13/06',home:'BRASIL',away:'MARROCOS'},
+  {id:7,group:'C',date:'13/06',home:'HAITI',away:'ESCOCIA'},
+  {id:8,group:'D',date:'14/06',home:'AUSTRALIA',away:'TURQUIA'},
+  {id:9,group:'E',date:'14/06',home:'ALEMANHA',away:'CURACAO'},
+  {id:10,group:'F',date:'14/06',home:'HOLANDA',away:'JAPAO'},
+  {id:11,group:'E',date:'14/06',home:'COSTA_MARFIM',away:'EQUADOR'},
+  {id:12,group:'F',date:'14/06',home:'SUECIA',away:'TUNISIA'},
+  {id:13,group:'H',date:'15/06',home:'ESPANHA',away:'CABO_VERDE'},
+  {id:14,group:'G',date:'15/06',home:'BELGICA',away:'EGITO'},
+  {id:15,group:'H',date:'15/06',home:'ARABIA',away:'URUGUAI'},
+  {id:16,group:'G',date:'15/06',home:'IRA',away:'NOVA_ZELANDIA'},
+  {id:17,group:'I',date:'16/06',home:'FRANCA',away:'SENEGAL'},
+  {id:18,group:'I',date:'16/06',home:'IRAQUE',away:'NORUEGA'},
+  {id:19,group:'J',date:'16/06',home:'ARGENTINA',away:'ARGELIA'},
+  {id:20,group:'J',date:'17/06',home:'AUSTRIA',away:'JORDANIA'},
+  {id:21,group:'K',date:'17/06',home:'PORTUGAL',away:'RD_CONGO'},
+  {id:22,group:'L',date:'17/06',home:'INGLATERRA',away:'CROACIA'},
+  {id:23,group:'L',date:'17/06',home:'GANA',away:'PANAMA'},
+  {id:24,group:'K',date:'17/06',home:'UZBEQUISTAO',away:'COLOMBIA'},
+  {id:25,group:'A',date:'18/06',home:'REP_TCHECA',away:'AFRICA_SUL'},
+  {id:26,group:'B',date:'18/06',home:'SUICA',away:'BOSNIA'},
+  {id:27,group:'B',date:'18/06',home:'CANADA',away:'CATAR'},
+  {id:28,group:'A',date:'18/06',home:'MEXICO',away:'COREIA_SUL'},
+  {id:29,group:'D',date:'19/06',home:'USA',away:'AUSTRALIA'},
+  {id:30,group:'C',date:'19/06',home:'ESCOCIA',away:'MARROCOS'},
+  {id:31,group:'C',date:'19/06',home:'BRASIL',away:'HAITI'},
+  {id:32,group:'D',date:'20/06',home:'TURQUIA',away:'PARAGUAI'},
+  {id:33,group:'F',date:'20/06',home:'HOLANDA',away:'SUECIA'},
+  {id:34,group:'E',date:'20/06',home:'ALEMANHA',away:'COSTA_MARFIM'},
+  {id:35,group:'E',date:'20/06',home:'EQUADOR',away:'CURACAO'},
+  {id:36,group:'F',date:'21/06',home:'TUNISIA',away:'JAPAO'},
+  {id:37,group:'H',date:'21/06',home:'ESPANHA',away:'ARABIA'},
+  {id:38,group:'G',date:'21/06',home:'BELGICA',away:'IRA'},
+  {id:39,group:'H',date:'21/06',home:'URUGUAI',away:'CABO_VERDE'},
+  {id:40,group:'G',date:'21/06',home:'NOVA_ZELANDIA',away:'EGITO'},
+  {id:41,group:'J',date:'22/06',home:'ARGENTINA',away:'AUSTRIA'},
+  {id:42,group:'I',date:'22/06',home:'FRANCA',away:'IRAQUE'},
+  {id:43,group:'I',date:'22/06',home:'NORUEGA',away:'SENEGAL'},
+  {id:44,group:'J',date:'23/06',home:'JORDANIA',away:'ARGELIA'},
+  {id:45,group:'K',date:'23/06',home:'PORTUGAL',away:'UZBEQUISTAO'},
+  {id:46,group:'L',date:'23/06',home:'INGLATERRA',away:'GANA'},
+  {id:47,group:'L',date:'23/06',home:'PANAMA',away:'CROACIA'},
+  {id:48,group:'K',date:'23/06',home:'COLOMBIA',away:'RD_CONGO'},
+  {id:49,group:'B',date:'24/06',home:'BOSNIA',away:'CATAR'},
+  {id:50,group:'B',date:'24/06',home:'SUICA',away:'CANADA'},
+  {id:51,group:'C',date:'24/06',home:'MARROCOS',away:'HAITI'},
+  {id:52,group:'C',date:'24/06',home:'ESCOCIA',away:'BRASIL'},
+  {id:53,group:'A',date:'24/06',home:'AFRICA_SUL',away:'COREIA_SUL'},
+  {id:54,group:'A',date:'24/06',home:'REP_TCHECA',away:'MEXICO'},
+  {id:55,group:'E',date:'25/06',home:'CURACAO',away:'COSTA_MARFIM'},
+  {id:56,group:'E',date:'25/06',home:'EQUADOR',away:'ALEMANHA'},
+  {id:57,group:'F',date:'25/06',home:'TUNISIA',away:'HOLANDA'},
+  {id:58,group:'F',date:'25/06',home:'JAPAO',away:'SUECIA'},
+  {id:59,group:'D',date:'25/06',home:'PARAGUAI',away:'AUSTRALIA'},
+  {id:60,group:'D',date:'25/06',home:'TURQUIA',away:'USA'},
+  {id:61,group:'I',date:'26/06',home:'SENEGAL',away:'IRAQUE'},
+  {id:62,group:'I',date:'26/06',home:'NORUEGA',away:'FRANCA'},
+  {id:63,group:'H',date:'26/06',home:'URUGUAI',away:'ESPANHA'},
+  {id:64,group:'H',date:'26/06',home:'CABO_VERDE',away:'ARABIA'},
+  {id:65,group:'G',date:'27/06',home:'NOVA_ZELANDIA',away:'BELGICA'},
+  {id:66,group:'G',date:'27/06',home:'EGITO',away:'IRA'},
+  {id:67,group:'L',date:'27/06',home:'PANAMA',away:'INGLATERRA'},
+  {id:68,group:'L',date:'27/06',home:'CROACIA',away:'GANA'},
+  {id:69,group:'K',date:'27/06',home:'RD_CONGO',away:'UZBEQUISTAO'},
+  {id:70,group:'K',date:'27/06',home:'COLOMBIA',away:'PORTUGAL'},
+  {id:71,group:'J',date:'27/06',home:'ARGELIA',away:'AUSTRIA'},
+  {id:72,group:'J',date:'27/06',home:'JORDANIA',away:'ARGENTINA'}
+];
+
+const TEAMS = {
+  MEXICO:{name:'México',code:'mx'},AFRICA_SUL:{name:'África do Sul',code:'za'},
+  COREIA_SUL:{name:'Coreia do Sul',code:'kr'},REP_TCHECA:{name:'Rep. Tcheca',code:'cz'},
+  CANADA:{name:'Canadá',code:'ca'},BOSNIA:{name:'Bósnia',code:'ba'},
+  USA:{name:'EUA',code:'us'},PARAGUAI:{name:'Paraguai',code:'py'},
+  CATAR:{name:'Catar',code:'qa'},SUICA:{name:'Suíça',code:'ch'},
+  BRASIL:{name:'Brasil',code:'br'},MARROCOS:{name:'Marrocos',code:'ma'},
+  HAITI:{name:'Haiti',code:'ht'},ESCOCIA:{name:'Escócia',code:'gb-sct'},
+  AUSTRALIA:{name:'Austrália',code:'au'},TURQUIA:{name:'Turquia',code:'tr'},
+  ALEMANHA:{name:'Alemanha',code:'de'},CURACAO:{name:'Curaçao',code:'cw'},
+  HOLANDA:{name:'Holanda',code:'nl'},JAPAO:{name:'Japão',code:'jp'},
+  COSTA_MARFIM:{name:'Costa do Marfim',code:'ci'},EQUADOR:{name:'Equador',code:'ec'},
+  SUECIA:{name:'Suécia',code:'se'},TUNISIA:{name:'Tunísia',code:'tn'},
+  ESPANHA:{name:'Espanha',code:'es'},CABO_VERDE:{name:'Cabo Verde',code:'cv'},
+  BELGICA:{name:'Bélgica',code:'be'},EGITO:{name:'Egito',code:'eg'},
+  ARABIA:{name:'Arábia Saudita',code:'sa'},URUGUAI:{name:'Uruguai',code:'uy'},
+  IRA:{name:'Irã',code:'ir'},NOVA_ZELANDIA:{name:'Nova Zelândia',code:'nz'},
+  FRANCA:{name:'França',code:'fr'},SENEGAL:{name:'Senegal',code:'sn'},
+  IRAQUE:{name:'Iraque',code:'iq'},NORUEGA:{name:'Noruega',code:'no'},
+  ARGENTINA:{name:'Argentina',code:'ar'},ARGELIA:{name:'Argélia',code:'dz'},
+  AUSTRIA:{name:'Áustria',code:'at'},JORDANIA:{name:'Jordânia',code:'jo'},
+  PORTUGAL:{name:'Portugal',code:'pt'},RD_CONGO:{name:'RD Congo',code:'cd'},
+  INGLATERRA:{name:'Inglaterra',code:'gb-eng'},CROACIA:{name:'Croácia',code:'hr'},
+  GANA:{name:'Gana',code:'gh'},PANAMA:{name:'Panamá',code:'pa'},
+  UZBEQUISTAO:{name:'Uzbequistão',code:'uz'},COLOMBIA:{name:'Colômbia',code:'co'}
+};
+
+const GROUP_NAMES = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById(name).classList.add('active');
+}
+
+function calculatePoints(pred, actual) {
+  const pH = +pred.home_score, pA = +pred.away_score, aH = +actual.home_score, aA = +actual.away_score;
+  if (isNaN(pH) || isNaN(pA) || isNaN(aH) || isNaN(aA)) return 0;
+  if (pH === aH && pA === aA) return 15;
+  const pD = pH - pA, aD = aH - aA;
+  const pW = pD > 0 ? 'h' : pD < 0 ? 'a' : 'd';
+  const aW = aD > 0 ? 'h' : aD < 0 ? 'a' : 'd';
+  if (pW === aW && pD === aD) return 10;
+  if (pW === aW) return 7;
+  if (pH === aH || pA === aA) return 5;
+  if (Math.abs((pH + pA) - (aH + aA)) <= 2) return 2;
+  return 0;
+}
+
+function getFlag(code) { return `https://flagcdn.com/w20/${code}.png`; }
+
+function buildStandings(matchResults) {
+  const groups = {};
+  const groupMatches = MATCHES.filter(m => m.group && m.stage === 'group');
+  
+  groupMatches.forEach(m => {
+    if (!groups[m.group]) groups[m.group] = {};
+    [m.homeTeam, m.awayTeam].forEach(t => {
+      if (!groups[m.group][t]) groups[m.group][t] = { team:t, pts:0, gp:0, w:0, d:0, l:0, gf:0, ga:0, gd:0 };
+    });
+  });
+
+  groupMatches.forEach(m => {
+    const r = matchResults[m.id];
+    if (!r || r.home_score == null || r.away_score == null) return;
+    const h = groups[m.group][m.homeTeam], a = groups[m.group][m.awayTeam];
+    const hs = +r.home_score, as = +r.away_score;
+    h.gp++; a.gp++; h.gf += hs; h.ga += as; a.gf += as; a.ga += hs;
+    h.gd = h.gf - h.ga; a.gd = a.gf - a.ga;
+    if (hs > as) { h.w++; h.pts += 3; a.l++; }
+    else if (hs < as) { a.w++; a.pts += 3; h.l++; }
+    else { h.d++; h.pts++; a.d++; a.pts++; }
+  });
+
+  const sorted = {};
+  GROUP_NAMES.forEach(g => {
+    if (!groups[g]) return;
+    sorted[g] = Object.values(groups[g]).sort((a,b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+  });
+  return sorted;
+}
+
+async function loadData() {
+  const { data: results } = await supabase.from('match_results').select('*').order('match_id');
+  const { data: predictions } = await supabase.from('predictions').select('*');
+  const { data: profiles } = await supabase.from('profiles').select('*').order('total_points', { ascending: false });
+  
+  const resultMap = {};
+  (results || []).forEach(r => resultMap[r.match_id] = r);
+
+  renderStandings(resultMap, results || []);
+  renderDashboard(profiles || [], predictions || [], resultMap);
+  renderScorers(results || []);
+  renderPredictions(profiles || [], predictions || [], resultMap);
+}
+
+function renderStandings(resultMap, results) {
+  const standings = buildStandings(resultMap);
+  const playedCount = results.filter(r => r.played).length;
+  const totalGoals = results.reduce((s, r) => s + (r.home_score || 0) + (r.away_score || 0), 0);
+  
+  document.getElementById('kpi-matches').textContent = MATCHES.filter(m => m.group).length;
+  document.getElementById('kpi-played').textContent = playedCount;
+  document.getElementById('kpi-played-sub').textContent = 'de ' + MATCHES.filter(m => m.group).length + ' da fase de grupos';
+  document.getElementById('kpi-goals').textContent = totalGoals;
+  document.getElementById('kpi-avg').textContent = playedCount > 0 ? (totalGoals / playedCount).toFixed(1) : '-';
+
+  let html = '';
+  GROUP_NAMES.forEach(g => {
+    const teams = standings[g];
+    if (!teams || teams.length === 0) return;
+    const allPlayed = teams.every(t => t.gp === 3);
+    html += '<div class="group-section">';
+    html += `<div class="group-header">Grupo ${g}<span class="group-badge ${allPlayed ? 'done' : 'active'}">${allPlayed ? 'COMPLETO' : 'EM ANDAMENTO'}</span></div>`;
+    html += '<div class="table-wrap" style="border-radius:0 0 12px 12px"><table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>';
+    teams.forEach((t, i) => {
+      const info = TEAMS[t.team] || { name: t.team, code: 'xx' };
+      const cls = allPlayed ? (i < 2 ? 'qualified' : '') : '';
+      html += `<tr class="${cls}"><td class="pos pos-${i+1}">${i+1}</td>`;
+      html += `<td><div class="team-cell"><img src="${getFlag(info.code)}" alt="" onerror="this.style.display='none'">${info.name}</div></td>`;
+      html += `<td class="pts">${t.pts}</td><td>${t.gp}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf}</td><td>${t.ga}</td>`;
+      html += `<td class="${t.gd > 0 ? 'gd-positive' : t.gd < 0 ? 'gd-negative' : ''}">${t.gd > 0 ? '+' + t.gd : t.gd}</td></tr>`;
+    });
+    html += '</tbody></table></div></div>';
+  });
+  document.getElementById('standings-container').innerHTML = html;
+}
+
+function renderDashboard(profiles, predictions, resultMap) {
+  document.getElementById('dash-users').textContent = profiles.length;
+  document.getElementById('dash-preds').textContent = predictions.length;
+
+  let scoredPreds = 0, exactCount = 0;
+  predictions.forEach(p => {
+    const r = resultMap[p.match_id];
+    if (!r || r.home_score == null) return;
+    const pts = calculatePoints(p, r);
+    if (pts > 0) scoredPreds++;
+    if (pts === 15) exactCount++;
+  });
+  const totalScored = predictions.filter(p => resultMap[p.match_id] && resultMap[p.match_id].home_score != null).length;
+  document.getElementById('dash-accuracy').textContent = totalScored > 0 ? Math.round(scoredPreds / totalScored * 100) + '%' : '-';
+  document.getElementById('dash-exact').textContent = exactCount;
+
+  // Points chart
+  const labels = profiles.slice(0, 14).map(p => p.name || '?');
+  const data = profiles.slice(0, 14).map(p => p.total_points || 0);
+  new Chart(document.getElementById('chartPoints'), {
+    type: 'bar', data: { labels, datasets: [{ data, backgroundColor: data.map((_, i) => i === 0 ? '#c8a84e' : i < 3 ? '#b0bec5' : 'rgba(33,150,243,0.6)'), borderRadius: 6 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ grid:{ color:'rgba(255,255,255,0.05)' }, ticks:{ color:'#8a94a6' } }, x:{ ticks:{ color:'#8a94a6', maxRotation:45 } } } }
+  });
+
+  // Goals per group
+  const groupGoals = {};
+  GROUP_NAMES.forEach(g => groupGoals[g] = 0);
+  Object.values(resultMap).forEach(r => {
+    const m = MATCHES.find(x => x.id === r.match_id);
+    if (m && m.group && r.home_score != null) groupGoals[m.group] += (r.home_score || 0) + (r.away_score || 0);
+  });
+  const activeGroups = GROUP_NAMES.filter(g => groupGoals[g] > 0);
+  new Chart(document.getElementById('chartGoalsGroup'), {
+    type: 'bar', data: { labels: activeGroups.map(g => 'Grupo ' + g), datasets: [{ label:'Gols', data: activeGroups.map(g => groupGoals[g]), backgroundColor: activeGroups.map((_, i) => ['#c8a84e','#2196f3','#00c853','#ff6d00','#e91e63','#9c27b0','#00bcd4','#ff5722','#607d8b','#795548','#3f51b5','#009688'][i]), borderRadius: 8 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ grid:{ color:'rgba(255,255,255,0.05)' }, ticks:{ color:'#8a94a6' } }, x:{ ticks:{ color:'#8a94a6' } } } }
+  });
+
+  // Team analysis table
+  const teamStats = {};
+  MATCHES.filter(m => m.group).forEach(m => {
+    [m.homeTeam, m.awayTeam].forEach(t => { if (!teamStats[t]) teamStats[t] = { gp:0, w:0, d:0, l:0, gf:0, ga:0 }; });
+    const r = resultMap[m.id];
+    if (!r || r.home_score == null) return;
+    const h = teamStats[m.homeTeam], a = teamStats[m.awayTeam];
+    h.gp++; a.gp++; h.gf += +r.home_score; h.ga += +r.away_score; a.gf += +r.away_score; a.ga += +r.home_score;
+    const hs = +r.home_score, as = +r.away_score;
+    if (hs > as) { h.w++; a.l++; } else if (hs < as) { a.w++; h.l++; } else { h.d++; a.d++; }
+  });
+
+  const teamRows = Object.entries(teamStats).sort((a,b) => {
+    const pa = a[1].w * 3 + a[1].d, pb = b[1].w * 3 + b[1].d;
+    return pb - pa || (b[1].gf - b[1].ga) - (a[1].gf - a[1].ga) || b[1].gf - a[1].gf;
+  });
+  
+  const tbody = document.querySelector('#team-analysis-table tbody');
+  tbody.innerHTML = teamRows.map(([team, s]) => {
+    const info = TEAMS[team] || { name: team };
+    const m = MATCHES.find(x => (x.homeTeam === team || x.awayTeam === team) && x.group);
+    const pts = s.w * 3 + s.d;
+    const total = s.gp * 3;
+    const aproveitamento = total > 0 ? Math.round(pts / total * 100) : 0;
+    return `<tr><td><div class="team-cell"><img src="${getFlag(info.code)}" onerror="this.style.display='none'">${info.name}</div></td><td>${m?.group || '-'}</td><td>${s.gp}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td><td>${s.gf}</td><td>${s.ga}</td><td class="${s.gf - s.ga > 0 ? 'gd-positive' : 'gd-negative'}">${s.gf - s.ga > 0 ? '+' : ''}${s.gf - s.ga}</td><td class="pts">${pts}</td><td><div class="accuracy-bar"><div class="accuracy-fill" style="width:${aproveitamento}%;background:${aproveitamento>=70?'#00c853':aproveitamento>=50?'#ffab40':'#ff1744'}"></div></div>${aproveitamento}%</td></tr>`;
+  }).join('');
+}
+
+function renderScorers(results) {
+  const allGoals = [];
+  results.forEach(r => {
+    if (!r.home_goals) return;
+    const m = MATCHES.find(x => x.id === r.match_id);
+    (r.home_goals || []).forEach(g => allGoals.push({ player: g.player, minute: g.minute, team: m?.homeTeam, match: m }));
+    (r.away_goals || []).forEach(g => allGoals.push({ player: g.player, minute: g.minute, team: m?.awayTeam, match: m }));
+  });
+
+  // Top scorers
+  const scorerMap = {};
+  allGoals.forEach(g => {
+    if (!g.player) return;
+    if (!scorerMap[g.player]) scorerMap[g.player] = { name: g.player, team: g.team, goals: 0 };
+    scorerMap[g.player].goals++;
+  });
+  const topScorers = Object.values(scorerMap).sort((a, b) => b.goals - a.goals).slice(0, 20);
+
+  document.getElementById('scorers-list').innerHTML = topScorers.map((s, i) => {
+    const info = TEAMS[s.team] || { name: s.team, code: 'xx' };
+    return `<div class="scorer-card"><div class="scorer-rank ${i < 3 ? 'top' : ''}">${i + 1}</div><img src="${getFlag(info.code)}" width="22" onerror="this.style.display='none'"><div><div class="scorer-name">${s.name}</div><div class="scorer-team">${info.name}</div></div><div class="scorer-goals">${s.goals}</div></div>`;
+  }).join('');
+
+  // All goals table
+  document.querySelector('#all-goals-table tbody').innerHTML = allGoals.sort((a, b) => parseInt(a.minute) - parseInt(b.minute)).map((g, i) => {
+    const info = TEAMS[g.team] || { name: g.team, code: 'xx' };
+    const matchLabel = g.match ? `${TEAMS[g.match.homeTeam]?.name || g.match.homeTeam} ${g.match.homeTeam === g.team ? '🇺' : '🅥'} ${TEAMS[g.match.awayTeam]?.name || g.match.awayTeam}` : '';
+    return `<tr><td>${i + 1}</td><td><strong>${g.player}</strong></td><td><div class="team-cell"><img src="${getFlag(info.code)}" onerror="this.style.display='none'">${info.name}</div></td><td>${g.minute}'</td><td style="font-size:11px;color:var(--muted)">${matchLabel}</td></tr>`;
+  }).join('');
+
+  // Minutes chart
+  const minuteBuckets = { '0-15':0, '16-30':0, '31-45':0, '45+':0, '46-60':0, '61-75':0, '76-90':0, '90+':0 };
+  allGoals.forEach(g => {
+    const m = parseInt(g.minute) || 0;
+    if (m <= 15) minuteBuckets['0-15']++;
+    else if (m <= 30) minuteBuckets['16-30']++;
+    else if (m <= 45) minuteBuckets['31-45']++;
+    else if (m <= 45) minuteBuckets['45+']++;
+    else if (m <= 60) minuteBuckets['46-60']++;
+    else if (m <= 75) minuteBuckets['61-75']++;
+    else if (m <= 90) minuteBuckets['76-90']++;
+    else minuteBuckets['90+']++;
+  });
+  new Chart(document.getElementById('chartMinutes'), {
+    type: 'doughnut',
+    data: { labels: Object.keys(minuteBuckets), datasets: [{ data: Object.values(minuteBuckets), backgroundColor: ['#c8a84e','#2196f3','#00c853','#ff6d00','#e91e63','#9c27b0','#00bcd4','#ff5722'], borderWidth: 2, borderColor: '#131820' }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#8a94a6', padding:12 } } } }
+  });
+}
+
+function renderPredictions(profiles, predictions, resultMap) {
+  const userStats = {};
+  profiles.forEach(p => { userStats[p.id] = { name: p.name, points: p.total_points, exact:0, winnerDiff:0, winner:0, oneTeam:0, approx:0, miss:0, scored:0, total:0 }; });
+
+  predictions.forEach(p => {
+    const r = resultMap[p.match_id];
+    if (!r || r.home_score == null) return;
+    const us = userStats[p.user_id];
+    if (!us) return;
+    us.total++;
+    const pts = calculatePoints(p, r);
+    if (pts === 15) us.exact++;
+    else if (pts === 10) us.winnerDiff++;
+    else if (pts === 7) us.winner++;
+    else if (pts === 5) us.oneTeam++;
+    else if (pts === 2) us.approx++;
+    else us.miss++;
+    if (pts > 0) us.scored++;
+  });
+
+  const sorted = Object.values(userStats).sort((a, b) => b.points - a.points);
+  document.getElementById('accuracy-table').innerHTML = sorted.map((u, i) => {
+    const acc = u.total > 0 ? Math.round(u.scored / u.total * 100) : 0;
+    const ppg = u.total > 0 ? (u.points / u.total).toFixed(1) : '0';
+    const accClass = acc >= 60 ? 'accuracy-excellent' : acc >= 40 ? 'accuracy-good' : acc >= 25 ? 'accuracy-avg' : 'accuracy-bad';
+    return `<tr>
+      <td class="pos pos-${i+1}">${i+1}</td><td><strong>${u.name}</strong></td><td class="pts">${u.points}</td>
+      <td>${u.exact}</td><td>${u.winnerDiff}</td><td>${u.winner}</td><td>${u.oneTeam}</td><td>${u.approx}</td><td>${u.miss}</td>
+      <td class="${accClass}">${acc}%</td><td>${ppg}</td></tr>`;
+  }).join('');
+
+  // Evolution chart (points per match_id - simplified)
+  const matchIds = [...new Set(predictions.map(p => p.match_id).filter(id => resultMap[id] && resultMap[id].home_score != null))].sort((a, b) => a - b);
+  const top3 = sorted.slice(0, 3);
+  const datasets = top3.map((u, i) => {
+    const colors = ['#c8a84e', '#2196f3', '#00c853'];
+    let cum = 0;
+    const data = matchIds.map(mid => {
+      const pred = predictions.find(p => p.user_id === profiles.find(x => x.name === u.name)?.id && p.match_id === mid);
+      if (pred && resultMap[mid]) cum += calculatePoints(pred, resultMap[mid]);
+      return cum;
+    });
+    return { label: u.name, data, borderColor: colors[i], backgroundColor: colors[i] + '20', fill: true, tension: 0.4, pointRadius: 2 };
+  });
+
+  new Chart(document.getElementById('chartEvo'), {
+    type: 'line', data: { labels: matchIds.map(id => 'M' + id), datasets },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#8a94a6' } } }, scales:{ y:{ grid:{ color:'rgba(255,255,255,0.05)' }, ticks:{ color:'#8a94a6' } }, x:{ ticks:{ color:'#8a94a6' } } } }
+  });
+
+  // Hit type distribution
+  const allExact = sorted.reduce((s, u) => s + u.exact, 0);
+  const allWD = sorted.reduce((s, u) => s + u.winnerDiff, 0);
+  const allW = sorted.reduce((s, u) => s + u.winner, 0);
+  const allOT = sorted.reduce((s, u) => s + u.oneTeam, 0);
+  const allApprox = sorted.reduce((s, u) => s + u.approx, 0);
+  const allMiss = sorted.reduce((s, u) => s + u.miss, 0);
+
+  new Chart(document.getElementById('chartTypes'), {
+    type: 'polarArea',
+    data: { labels: ['Placar Exato (15)', 'Vencedor+Dif (10)', 'Vencedor (7)', '1 Time (5)', 'Aprox (2)', 'Erros (0)'], datasets: [{ data: [allExact, allWD, allW, allOT, allApprox, allMiss], backgroundColor: ['#c8a84e','#00c853','#2196f3','#ff6d00','#9c27b0','#ef5350'] }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#8a94a6', padding:8, font:{ size:10 } } } }, scales:{ r:{ grid:{ color:'rgba(255,255,255,0.08)' }, ticks:{ display:false } } } }
+  });
+}
+
+loadData();
+</script>
+</body>
+</html>
