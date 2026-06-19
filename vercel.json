@@ -3,6 +3,12 @@
   "buildCommand": "npx vite build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
+  "functions": {
+    "api/sync-fifa.js": {
+      "memory": 512,
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
