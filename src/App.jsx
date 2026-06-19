@@ -20,6 +20,12 @@ function App() {
   const [chatUnread, setChatUnread] = useState(0);
   const chatLastId = useRef(0);
 
+  const [showResetForm, setShowResetForm] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+
   const handleChatRead = useCallback((lastId) => {
     chatLastId.current = lastId;
     setChatUnread(0);
@@ -48,6 +54,48 @@ function App() {
       window.location.href = '/';
     }
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    if (params.get('type') === 'recovery' && hash) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      if (accessToken) {
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+        }).then(() => setShowResetForm(true));
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    setResetSuccess('');
+    if (!newPassword || newPassword.length < 3) {
+      setResetError('Senha deve ter no mínimo 3 caracteres');
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      setResetError('Senhas não conferem');
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      setResetError(error.message);
+    } else {
+      setResetSuccess('Senha alterada com sucesso!');
+      setTimeout(() => {
+        setShowResetForm(false);
+        setNewPassword('');
+        setNewPasswordConfirm('');
+      }, 2000);
+    }
+  };
 
   const { resolvedMatches, standings, bestThird } = useMemo(
     () => resolveAllMatches(initialMatches, matchResults),
@@ -231,6 +279,29 @@ function App() {
       <footer className="footer">
         <p>🏆 Copa do Mundo 2026 • Bolão de Palpites • Feito para boleiros e boleiras</p>
       </footer>
+
+      {showResetForm && (
+        <div className="reset-overlay">
+          <div className="reset-modal">
+            <h2>Criar Nova Senha</h2>
+            {resetError && <p className="reset-error">{resetError}</p>}
+            {resetSuccess && <p className="reset-success">{resetSuccess}</p>}
+            {!resetSuccess && (
+              <form onSubmit={handleResetPassword}>
+                <input type="password" placeholder="Nova senha (mín. 3 caracteres)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="reset-input" autoFocus />
+                <input type="password" placeholder="Confirmar nova senha"
+                  value={newPasswordConfirm}
+                  onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                  className="reset-input" />
+                <button type="submit" className="reset-submit">Alterar Senha</button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
