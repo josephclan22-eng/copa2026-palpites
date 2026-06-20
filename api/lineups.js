@@ -116,7 +116,7 @@ export default async (req, res) => {
         const hasFieldStatus = all.some(p => p.fieldStatus === 1)
         if (hasFieldStatus) {
           return {
-            starting: all.filter(p => p.fieldStatus === 1).sort((a, b) => (a.position || '').localeCompare(b.position || '')),
+            starting: all.filter(p => p.fieldStatus === 1).sort((a, b) => String(a.position || '').localeCompare(String(b.position || ''))),
             substitutes: all.filter(p => p.fieldStatus !== 1),
             formation: team.Formation || '',
             isSquad: false
@@ -124,7 +124,7 @@ export default async (req, res) => {
         }
         // For finished matches, FIFA clears FieldStatus - show all as squad
         return {
-          starting: all.sort((a, b) => (a.position || '').localeCompare(b.position || '')),
+          starting: all.sort((a, b) => String(a.position || '').localeCompare(String(b.position || ''))),
           substitutes: [],
           formation: team.Formation || '',
           isSquad: true
