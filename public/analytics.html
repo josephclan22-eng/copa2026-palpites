@@ -179,6 +179,7 @@ tr:hover td { background:rgba(200,168,78,0.03) }
   <span class="sep"></span>
   <select id="user-filter" onchange="onUserFilter()"><option value="">👥 Todos os participantes</option></select>
   <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+  <span style="font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap" id="last-update"></span>
 </div>
 
 <div class="container">
@@ -290,7 +291,9 @@ function renderPredTab(){
   new Chart(document.getElementById('chartTypes'),{type:'polarArea',data:{labels:['Exato(15)','V+D(10)','Venc(7)','1T(5)','Aprox(2)','Erro(0)'],datasets:[{data:[ae,awd,aw,aot,aap,am],backgroundColor:['rgba(200,168,78,0.7)','rgba(0,230,118,0.6)','rgba(68,138,255,0.6)','rgba(255,145,0,0.6)','rgba(124,77,255,0.6)','rgba(255,61,90,0.6)'],borderColor:['#c8a84e','#00e676','#448aff','#ff9100','#7c4dff','#ff3d5a'],borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tc,padding:8,font:{size:10},usePointStyle:true}}},scales:{r:{grid:{color:gc+'10'},ticks:{display:false,stepSize:Math.max(1,Math.round((ae+awd+aw+aot+aap+am)/6))}}}}})
 }
 
-fetch('copa-data.json').then(r=>r.json()).then(init);
+function loadData(){fetch('/api/copa-data').then(r=>r.json()).then(data=>{const old=EMBEDDED;init(data);if(!old)document.getElementById('last-update').textContent=new Date().toLocaleTimeString('pt-BR')}).catch(()=>{});document.getElementById('last-update').textContent='Atualizando...'}
+fetch('/api/copa-data').then(r=>r.json()).then(init).catch(()=>fetch('copa-data.json').then(r=>r.json()).then(init));
+setInterval(loadData, 120000);
 </script>
 </body>
 </html>
