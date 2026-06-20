@@ -94,7 +94,7 @@ export default async (req, res) => {
     // 3. Fetch lineups for each match (limit to avoid rate limiting)
     const lineups = []
     const ids = Object.keys(matchMap)
-    const toFetch = ids.slice(0, 20) // limit to 20 upcoming matches
+    const toFetch = ids
 
     for (const idMatch of toFetch) {
       const info = matchMap[idMatch]
