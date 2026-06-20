@@ -41,8 +41,8 @@ body::before { content:''; position:fixed; top:0; left:0; width:100%; height:100
 .hero-particles span { position:absolute; width:2px; height:2px; background:var(--gold); border-radius:50%; animation:float 6s infinite; opacity:0.3 }
 @keyframes float { 0%{transform:translateY(100%) scale(0)} 50%{opacity:0.6} 100%{transform:translateY(-100%) scale(1)} }
 .hero-content { position:relative; max-width:1600px; margin:0 auto; padding:40px 28px 28px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:24px }
-.hero-left h1 { font-family:var(--font-display); font-size:clamp(36px,7vw,64px); font-weight:700; letter-spacing:3px; line-height:0.95; text-transform:uppercase; background:linear-gradient(180deg,var(--text) 40%,var(--gold)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text }
-.hero-left h1 em { font-style:normal; -webkit-text-fill-color:var(--gold); font-size:clamp(22px,4vw,32px); letter-spacing:8px; display:block; margin-top:4px }
+.hero-left h1 { font-family:var(--font-display); font-size:clamp(36px,7vw,64px); font-weight:700; letter-spacing:3px; line-height:0.95; text-transform:uppercase; color:var(--text); text-shadow:0 2px 12px rgba(200,168,78,0.2) }
+.hero-left h1 em { font-style:normal; color:var(--gold); font-size:clamp(22px,4vw,32px); letter-spacing:8px; display:block; margin-top:4px; text-shadow:0 0 20px rgba(200,168,78,0.3) }
 .hero-left p { font-family:var(--font-body); font-size:12px; color:var(--muted); letter-spacing:4px; text-transform:uppercase; margin-top:10px; font-weight:500 }
 .hero-stats { display:flex; gap:16px; flex-wrap:wrap }
 .hero-stat { text-align:center; padding:16px 24px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:14px; min-width:90px; backdrop-filter:blur(8px); transition:transform var(--transition),border-color var(--transition) }
@@ -125,7 +125,8 @@ tr:hover td { background:rgba(200,168,78,0.03) }
 @media(max-width:768px) { .charts-grid{grid-template-columns:1fr} .kpi-row{grid-template-columns:repeat(2,1fr)} .hero-left h1{font-size:30px} }
 
 /* SCORERS */
-.scorer-list { max-height:500px; overflow-y:auto }
+.scorer-list { max-height:500px; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none }
+.scorer-list::-webkit-scrollbar { display:none }
 .scorer-card { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid rgba(128,128,128,0.05); transition:transform var(--transition) }
 .scorer-card:hover { transform:translateX(4px) }
 .scorer-rank { width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; font-size:14px; background:var(--card2); color:var(--text2); border:1px solid var(--border) }
