@@ -34,12 +34,13 @@ export function getMatchStatus(match, matchResult) {
     return { phase: 'live_local', label: `${Math.floor(elapsed)}' 1ºT`, elapsed: Math.floor(elapsed) }
   }
 
-  if (elapsed <= 60) {
+  if (elapsed <= 63) {
     return { phase: 'halftime', label: 'Intervalo', elapsed: null }
   }
 
-  if (elapsed <= 110) {
-    return { phase: 'live_local', label: `${Math.floor(elapsed - 12)}' 2ºT`, elapsed: Math.floor(elapsed - 12) }
+  if (elapsed <= 120) {
+    const secondHalf = Math.floor(elapsed - 15)
+    return { phase: 'live_local', label: `${secondHalf}' 2ºT`, elapsed: secondHalf }
   }
 
   return { phase: 'finished', label: 'Encerrado', elapsed: null }

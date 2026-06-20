@@ -71,8 +71,9 @@ function LiveTimer({ match, result }) {
     function tick() {
       const remaining = getLockTimeRemaining(match);
       const elapsed = Math.abs(Math.min(remaining, 0));
-      if (elapsed < 90) { setLabel(`${elapsed}'`); return; }
-      setLabel(`90'+${Math.min(elapsed - 90, 30)}`);
+      if (elapsed <= 48) { setLabel(`${elapsed}'`); return; }
+      if (elapsed <= 63) { setLabel('Intervalo'); return; }
+      setLabel(`${elapsed - 15}'`);
     }
 
     tick();
