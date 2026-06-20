@@ -386,6 +386,13 @@ tr:hover td { background:rgba(200,168,78,0.03) }
     <div class="kpi-card t-blue"><span class="spark">📋</span><div class="lbl">Jogos com Escalação</div><div class="val" id="l-count">-</div></div>
     <div class="kpi-card t-green"><span class="spark">⏱️</span><div class="lbl">Próxima Partida</div><div class="val" id="l-next" style="font-size:16px">-</div></div>
   </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <select id="lineup-filter" onchange="filterLineups()" style="padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:var(--font-body);font-size:12px;cursor:pointer;outline:none;font-weight:500;min-width:200px">
+      <option value="all">📋 Todas as partidas</option>
+    </select>
+    <button class="export-btn" onclick="expandAllLineups()" title="Expandir todas">🔽 Expandir todas</button>
+    <button class="export-btn" onclick="collapseAllLineups()" title="Recolher todas">🔼 Recolher todas</button>
+  </div>
   <div id="lineups-container"></div>
 </div>
 
@@ -571,24 +578,54 @@ function loadData(silent=true){
   })
 }
 
+let LINEUPS_DATA=null;
+
+function filterLineups(){
+  const val=document.getElementById('lineup-filter').value;
+  document.querySelectorAll('#lineups-container .lineup-match').forEach(el=>{
+    el.style.display=(val==='all'||el.dataset.matchKey===val)?'':'none'
+  })
+}
+
+function expandAllLineups(){
+  document.querySelectorAll('#lineups-container .lineup-body').forEach(b=>b.classList.remove('collapsed'));
+  document.querySelectorAll('#lineups-container .expand-btn').forEach(b=>b.textContent='▲')
+}
+
+function collapseAllLineups(){
+  document.querySelectorAll('#lineups-container .lineup-body').forEach(b=>b.classList.add('collapsed'));
+  document.querySelectorAll('#lineups-container .expand-btn').forEach(b=>b.textContent='▶')
+}
+
 async function loadLineups(){
   try{
     const r=await fetch('/api/lineups');if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();
-    if(!d.lineups)return;
+    if(!d.lineups)return;LINEUPS_DATA=d;
     document.getElementById('l-count').textContent=d.lineups.filter(l=>l.hasLineup).length;
     const next=d.lineups.find(l=>l.status===1||l.status===3);
     if(next){const ht=TEAMS[next.homeTeam]||{name:next.homeTeam},at=TEAMS[next.awayTeam]||{name:next.awayTeam};document.getElementById('l-next').textContent=(ht.name||next.homeTeam)+' vs '+(at.name||next.awayTeam)}
+    // Build filter dropdown
+    const sel=document.getElementById('lineup-filter');const cur=sel.value;
+    sel.innerHTML='<option value="all">📋 Todas as partidas</option>';
+    d.lineups.forEach(l=>{
+      const ht=TEAMS[l.homeTeam]||{name:l.homeTeam};const at=TEAMS[l.awayTeam]||{name:l.awayTeam};
+      const key=`${l.homeTeam}_${l.awayTeam}`;
+      const badge=l.status===0?'✅':l.status===3?'🔴':'⏳';
+      sel.innerHTML+=`<option value="${key}">${badge} ${ht.name} vs ${at.name} (${l.date})</option>`
+    });
+    sel.value=cur||'all';
     let h='';
     d.lineups.forEach(l=>{
       const ht=TEAMS[l.homeTeam]||{name:l.homeTeam,code:'xx'};
       const at=TEAMS[l.awayTeam]||{name:l.awayTeam,code:'xx'};
       const isLive=l.status===3,isDone=l.status===0;
-      h+=`<div class="lineup-match"><div class="lineup-header"><div class="match-title"><img src="${getFlag(ht.code||'xx')}" onerror="this.style.display='none'" loading="lazy"><span>${ht.name}</span><span style="margin:0 4px;font-size:14px;color:var(--gold)">vs</span><img src="${getFlag(at.code||'xx')}" onerror="this.style.display='none'" loading="lazy"><span>${at.name}</span>${isLive?' <span class="live-tag">AO VIVO</span>':''}</div><div class="match-info">${isDone?'<span class="badge badge-done">ENCERRADO</span><br>':''}${l.date}<br><span style="font-size:10px;color:var(--muted)">${l.home.starting.length+l.away.starting.length} jogadores</span></div><button class="expand-btn" onclick="const b=this.closest('.lineup-match').querySelector('.lineup-body');if(b){b.classList.toggle('collapsed');this.textContent=b.classList.contains('collapsed')?'▶':'▲'}">▲</button></div>`;
-      if(!l.hasLineup){h+='<div class="no-lineup">⏳ Escalações ainda não divulgadas pela FIFA</div></div>';return}
+      const matchKey=`${l.homeTeam}_${l.awayTeam}`;
+      h+=`<div class="lineup-match" data-match-key="${matchKey}"><div class="lineup-header"><div class="match-title"><img src="${getFlag(ht.code||'xx')}" onerror="this.style.display='none'" loading="lazy"><span>${ht.name}</span><span style="margin:0 4px;font-size:14px;color:var(--gold)">vs</span><img src="${getFlag(at.code||'xx')}" onerror="this.style.display='none'" loading="lazy"><span>${at.name}</span>${isLive?' <span class="live-tag">AO VIVO</span>':''}</div><div class="match-info">${isDone?'<span class="badge badge-done">ENCERRADO</span><br>':''}${l.date}<br><span style="font-size:10px;color:var(--muted)">${l.home.starting.length+l.away.starting.length} jogadores</span></div><button class="expand-btn" onclick="const b=this.closest('.lineup-match').querySelector('.lineup-body');if(b){b.classList.toggle('collapsed');this.textContent=b.classList.contains('collapsed')?'▶':'▲'}">▶</button></div>`;
+      if(!l.hasLineup){h+='<div class="lineup-body collapsed"><div class="no-lineup">⏳ Escalações ainda não divulgadas pela FIFA</div></div></div>';return}
       const renderPlayers=(players,isSub)=>`<div class="player-list">${players.map(p=>`<div class="player-row"><span class="num ${isSub?'sub':''} ${p.captain?'cap':''}">${p.shirt||'?'}</span><span class="pos-tag">${(p.position||'')}</span><span class="name">${p.name}${p.captain?' ©':''}</span></div>`).join('')}</div>`;
       const homeLabel=l.home.formation?`— ${l.home.formation}`:'';
       const awayLabel=l.away.formation?`— ${l.away.formation}`:'';
-      h+=`<div class="lineup-body"><div class="lineup-team"><h4><img src="${getFlag(ht.code||'xx')}" onerror="this.style.display='none'">${ht.name} ${homeLabel}</h4>${renderPlayers(l.home.starting,false)}${l.home.substitutes.length>0?`<div class="subs-title">🔄 Reservas</div>${renderPlayers(l.home.substitutes,true)}`:''}</div><div class="lineup-vs"><div class="vs-badge">⚽</div><div class="formation">${l.home.formation||''} vs ${l.away.formation||''}</div></div><div class="lineup-team"><h4><img src="${getFlag(at.code||'xx')}" onerror="this.style.display='none'">${at.name} ${awayLabel}</h4>${renderPlayers(l.away.starting,false)}${l.away.substitutes.length>0?`<div class="subs-title">🔄 Reservas</div>${renderPlayers(l.away.substitutes,true)}`:''}</div></div></div>`});
+      h+=`<div class="lineup-body collapsed"><div class="lineup-team"><h4><img src="${getFlag(ht.code||'xx')}" onerror="this.style.display='none'">${ht.name} ${homeLabel}</h4>${renderPlayers(l.home.starting,false)}${l.home.substitutes.length>0?`<div class="subs-title">🔄 Reservas</div>${renderPlayers(l.home.substitutes,true)}`:''}</div><div class="lineup-vs"><div class="vs-badge">⚽</div><div class="formation">${l.home.formation||''} vs ${l.away.formation||''}</div></div><div class="lineup-team"><h4><img src="${getFlag(at.code||'xx')}" onerror="this.style.display='none'">${at.name} ${awayLabel}</h4>${renderPlayers(l.away.starting,false)}${l.away.substitutes.length>0?`<div class="subs-title">🔄 Reservas</div>${renderPlayers(l.away.substitutes,true)}`:''}</div></div></div>`});
     document.getElementById('lineups-container').innerHTML=h||'<div class="no-lineup">Nenhuma partida futura encontrada</div>'
   }catch(e){console.error('Erro lineups:',e)}
 }
