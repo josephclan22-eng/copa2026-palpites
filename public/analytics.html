@@ -153,6 +153,33 @@ tr:hover td { background:rgba(200,168,78,0.03) }
 /* BAR */
 .bar-wrap { height:7px; border-radius:4px; background:var(--border); overflow:hidden; margin-top:3px }
 .bar-fill { height:100%; border-radius:4px; transition:width 1s cubic-bezier(0.16,1,0.3,1) }
+
+/* LINEUPS */
+.lineup-match { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; transition:all var(--transition) }
+.lineup-match:hover { box-shadow:var(--shadow); border-color:var(--border2) }
+.lineup-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px }
+.lineup-header .match-title { font-family:var(--font-display); font-size:18px; letter-spacing:0.5px; display:flex; align-items:center; gap:10px }
+.lineup-header .match-title img { width:28px; height:28px }
+.lineup-header .match-info { font-size:11px; color:var(--muted); text-align:right }
+.lineup-header .match-info .live-tag { display:inline-block; padding:3px 10px; border-radius:5px; font-size:10px; font-weight:700; background:var(--red); color:#fff; margin-bottom:4px; animation:pulse 2s infinite }
+.lineup-body { display:grid; grid-template-columns:1fr auto 1fr; gap:16px; align-items:start }
+.lineup-team h4 { font-family:var(--font-display); font-size:14px; letter-spacing:0.5px; margin-bottom:10px; display:flex; align-items:center; gap:6px }
+.lineup-team h4 img { width:22px; height:22px }
+.player-list { display:flex; flex-direction:column; gap:3px }
+.player-row { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:6px; font-size:12px; background:var(--card2); transition:background var(--transition) }
+.player-row:hover { background:var(--border) }
+.player-row .num { width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:11px; background:var(--gold); color:#000; flex-shrink:0 }
+.player-row .num.sub { background:var(--border); color:var(--text2) }
+.player-row .num.cap { background:linear-gradient(135deg,var(--gold),var(--gold2)); box-shadow:0 0 8px rgba(200,168,78,0.4) }
+.player-row .pos-tag { font-size:9px; color:var(--muted); width:28px; text-transform:uppercase; font-weight:600 }
+.player-row .name { flex:1; font-weight:500 }
+.lineup-vs { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-width:60px }
+.lineup-vs .vs-badge { font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--gold) }
+.lineup-vs .formation { font-size:10px; color:var(--muted); text-align:center }
+.subs-title { font-size:11px; color:var(--muted); font-weight:600; margin-top:12px; margin-bottom:6px; letter-spacing:1px; text-transform:uppercase }
+.no-lineup { text-align:center; padding:30px; color:var(--muted); font-size:14px }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.6} }
+@media(max-width:768px){ .lineup-body{grid-template-columns:1fr} .lineup-vs{order:-1;flex-direction:row} }
 </style>
 </head>
 <body>
@@ -168,8 +195,16 @@ tr:hover td { background:rgba(200,168,78,0.03) }
       <div class="hero-stat"><div class="val" id="h-jogos">-</div><div class="lbl">Partidas</div></div>
       <div class="hero-stat"><div class="val" id="h-gols">-</div><div class="lbl">Gols</div></div>
       <div class="hero-stat"><div class="val" id="h-participantes">-</div><div class="lbl">Participantes</div></div>
-    </div>
+</div>
+</div>
+
+<div id="lineups" class="tab-content">
+  <div class="kpi-row">
+    <div class="kpi-card t-blue"><span class="spark">📋</span><div class="lbl">Jogos com Escalação</div><div class="val" id="l-count">-</div></div>
+    <div class="kpi-card t-green"><span class="spark">⏱️</span><div class="lbl">Próxima Partida</div><div class="val" id="l-next" style="font-size:18px">-</div></div>
   </div>
+  <div id="lineups-container"></div>
+</div>
 </div>
 
 <div class="toolbar">
@@ -177,6 +212,7 @@ tr:hover td { background:rgba(200,168,78,0.03) }
   <button class="tab-btn" onclick="switchTab('dashboard')">📈 Dashboard</button>
   <button class="tab-btn" onclick="switchTab('scorers')">⚽ Artilharia</button>
   <button class="tab-btn" onclick="switchTab('predictions')">🎯 Palpites</button>
+  <button class="tab-btn" onclick="switchTab('lineups')">📋 Pré-Jogo</button>
   <span class="sep"></span>
   <select id="user-filter" onchange="onUserFilter()"><option value="">👥 Todos os participantes</option></select>
   <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
@@ -293,6 +329,29 @@ function renderPredTab(){
 }
 
 function loadData(){fetch('/api/copa-data').then(r=>r.json()).then(data=>{const old=EMBEDDED;init(data);if(!old)document.getElementById('last-update').textContent=new Date().toLocaleTimeString('pt-BR')}).catch(()=>{});document.getElementById('last-update').textContent='Atualizando...'}
+
+async function loadLineups(){
+  try{
+    const r=await fetch('/api/lineups');const d=await r.json();
+    if(!d.lineups)return;
+    document.getElementById('l-count').textContent=d.lineups.filter(l=>l.hasLineup).length;
+    const next=d.lineups.find(l=>l.status===1||l.status===3);
+    if(next){const ht=TEAMS[next.homeTeam]||{name:next.homeTeam},at=TEAMS[next.awayTeam]||{name:next.awayTeam};document.getElementById('l-next').textContent=(ht.name||next.homeTeam)+' vs '+(at.name||next.awayTeam)}
+    let h='';
+    d.lineups.forEach(l=>{
+      const ht=TEAMS[l.homeTeam]||{name:l.homeTeam,code:'xx'};
+      const at=TEAMS[l.awayTeam]||{name:l.awayTeam,code:'xx'};
+      const isLive=l.status===3,isDone=l.status===0;
+      h+=`<div class="lineup-match"><div class="lineup-header"><div class="match-title"><img src="${getFlag(ht.code||'xx')}" onerror="this.style.display='none'"><span>${ht.name}</span><span class="vs-badge">vs</span><img src="${getFlag(at.code||'xx')}" onerror="this.style.display='none'"><span>${at.name}</span></div><div class="match-info">${isLive?'<span class="live-tag">AO VIVO</span><br>':''}${isDone?'<span class="badge badge-done">ENCERRADO</span><br>':''}${l.date}</div></div>`;
+      if(!l.hasLineup){h+='<div class="no-lineup">⏳ Escalações ainda não divulgadas pela FIFA</div></div>';return}
+      const renderPlayers=(players,isSub)=>
+        `<div class="player-list">${players.map(p=>`<div class="player-row"><span class="num ${isSub?'sub':''} ${p.captain?'cap':''}">${p.shirt||'?'}</span><span class="pos-tag">${(p.position||'')}</span><span class="name">${p.name}${p.captain?' ©':''}</span></div>`).join('')}</div>`;
+      h+=`<div class="lineup-body"><div class="lineup-team"><h4><img src="${getFlag(ht.code||'xx')}" onerror="this.style.display='none'">${ht.name} ${l.home.formation?'— '+l.home.formation:''}</h4>${renderPlayers(l.home.starting,false)}${l.home.substitutes.length>0?`<div class="subs-title">🔄 Reservas</div>${renderPlayers(l.home.substitutes,true)}`:''}</div><div class="lineup-vs"><div class="vs-badge">⚽</div><div class="formation">${l.home.formation||''} vs ${l.away.formation||''}</div></div><div class="lineup-team"><h4><img src="${getFlag(at.code||'xx')}" onerror="this.style.display='none'">${at.name} ${l.away.formation?'— '+l.away.formation:''}</h4>${renderPlayers(l.away.starting,false)}${l.away.substitutes.length>0?`<div class="subs-title">🔄 Reservas</div>${renderPlayers(l.away.substitutes,true)}`:''}</div></div></div>`});
+    document.getElementById('lineups-container').innerHTML=h||'<div class="no-lineup">Nenhuma partida futura encontrada</div>'
+  }catch(e){}
+}
+setInterval(loadLineups,180000);
+loadLineups();
 fetch('/api/copa-data').then(r=>r.json()).then(init).catch(()=>fetch('copa-data.json').then(r=>r.json()).then(init));
 setInterval(loadData, 120000);
 </script>
