@@ -15,7 +15,21 @@ const FIFA_TO_OURS = {
 
 // Upcoming group matches (IDs 30-72 from our MATCHES)
 const OUR_MATCHES = [
-  {id:30,date:'19/06/2026',home:'ESCOCIA',away:'MARROCOS'},{id:31,date:'19/06/2026',home:'BRASIL',away:'HAITI'},
+  {id:1,date:'11/06/2026',home:'MEXICO',away:'AFRICA_SUL'},{id:2,date:'11/06/2026',home:'COREIA_SUL',away:'REP_TCHECA'},
+  {id:3,date:'12/06/2026',home:'CANADA',away:'BOSNIA'},{id:4,date:'12/06/2026',home:'USA',away:'PARAGUAI'},
+  {id:5,date:'13/06/2026',home:'CATAR',away:'SUICA'},{id:6,date:'13/06/2026',home:'BRASIL',away:'MARROCOS'},
+  {id:7,date:'13/06/2026',home:'HAITI',away:'ESCOCIA'},{id:8,date:'14/06/2026',home:'AUSTRALIA',away:'TURQUIA'},
+  {id:9,date:'14/06/2026',home:'ALEMANHA',away:'CURACAO'},{id:10,date:'14/06/2026',home:'HOLANDA',away:'JAPAO'},
+  {id:11,date:'14/06/2026',home:'COSTA_MARFIM',away:'EQUADOR'},{id:12,date:'14/06/2026',home:'SUECIA',away:'TUNISIA'},
+  {id:13,date:'15/06/2026',home:'ESPANHA',away:'CABO_VERDE'},{id:14,date:'15/06/2026',home:'BELGICA',away:'EGITO'},
+  {id:15,date:'15/06/2026',home:'ARABIA',away:'URUGUAI'},{id:16,date:'15/06/2026',home:'IRA',away:'NOVA_ZELANDIA'},
+  {id:17,date:'16/06/2026',home:'FRANCA',away:'SENEGAL'},{id:18,date:'16/06/2026',home:'IRAQUE',away:'NORUEGA'},
+  {id:19,date:'16/06/2026',home:'ARGENTINA',away:'ARGELIA'},{id:20,date:'17/06/2026',home:'AUSTRIA',away:'JORDANIA'},
+  {id:21,date:'17/06/2026',home:'PORTUGAL',away:'RD_CONGO'},{id:22,date:'17/06/2026',home:'INGLATERRA',away:'CROACIA'},
+  {id:23,date:'17/06/2026',home:'GANA',away:'PANAMA'},{id:24,date:'17/06/2026',home:'UZBEQUISTAO',away:'COLOMBIA'},
+  {id:25,date:'18/06/2026',home:'REP_TCHECA',away:'AFRICA_SUL'},{id:26,date:'18/06/2026',home:'SUICA',away:'BOSNIA'},
+  {id:27,date:'18/06/2026',home:'CANADA',away:'CATAR'},{id:28,date:'18/06/2026',home:'MEXICO',away:'COREIA_SUL'},
+  {id:29,date:'19/06/2026',home:'USA',away:'AUSTRALIA'},{id:30,date:'19/06/2026',home:'ESCOCIA',away:'MARROCOS'},
   {id:32,date:'20/06/2026',home:'TURQUIA',away:'PARAGUAI'},{id:33,date:'20/06/2026',home:'HOLANDA',away:'SUECIA'},
   {id:34,date:'20/06/2026',home:'ALEMANHA',away:'COSTA_MARFIM'},{id:35,date:'20/06/2026',home:'EQUADOR',away:'CURACAO'},
   {id:36,date:'21/06/2026',home:'TUNISIA',away:'JAPAO'},{id:37,date:'21/06/2026',home:'ESPANHA',away:'ARABIA'},
@@ -68,7 +82,6 @@ export default async (req, res) => {
     // 2. Build map of FIFA match IDs to our match IDs
     const matchMap = {}
     for (const fm of cal.Results) {
-      if (Number(fm.MatchStatus) === 0) continue // skip finished
       const hc = fm.Home?.Abbreviation, ac = fm.Away?.Abbreviation
       if (!hc || !ac) continue
       const oh = FIFA_TO_OURS[hc], oa = FIFA_TO_OURS[ac]
