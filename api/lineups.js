@@ -63,6 +63,15 @@ function getPlayerName(p) {
   return p.PlayerName?.[0]?.Description || p.ShortName?.[0]?.Description || '?'
 }
 
+const POSITION_MAP = { 0: 'GOL', 1: 'DEF', 2: 'MEI', 3: 'ATA' }
+
+function getPosition(p) {
+  const pos = p.Position
+  if (typeof pos === 'number') return POSITION_MAP[pos] || '?'
+  if (typeof pos === 'string') return pos.substring(0, 3).toUpperCase()
+  return '?'
+}
+
 async function fetchFifa(url) {
   const res = await fetch(url, { headers: { 'User-Agent': 'copa2026/1.0' } })
   if (!res.ok) return null
@@ -108,15 +117,15 @@ export default async (req, res) => {
         if (!team?.Players || team.Players.length === 0) return { starting: [], substitutes: [], formation: team?.Formation || '', isSquad: false }
         const all = team.Players.map(p => ({
           name: getPlayerName(p),
-          shirt: p.ShirtNumber || '',
-          position: p.Position || '',
+          shirt: String(p.ShirtNumber || ''),
+          position: getPosition(p),
           captain: p.Captain || false,
           fieldStatus: p.FieldStatus || 0
         }))
         const hasFieldStatus = all.some(p => p.fieldStatus === 1)
         if (hasFieldStatus) {
           return {
-            starting: all.filter(p => p.fieldStatus === 1).sort((a, b) => String(a.position || '').localeCompare(String(b.position || ''))),
+            starting: all.filter(p => p.fieldStatus === 1),
             substitutes: all.filter(p => p.fieldStatus !== 1),
             formation: team.Formation || '',
             isSquad: false
@@ -124,7 +133,7 @@ export default async (req, res) => {
         }
         // For finished matches, FIFA clears FieldStatus - show all as squad
         return {
-          starting: all.sort((a, b) => String(a.position || '').localeCompare(String(b.position || ''))),
+          starting: all,
           substitutes: [],
           formation: team.Formation || '',
           isSquad: true
