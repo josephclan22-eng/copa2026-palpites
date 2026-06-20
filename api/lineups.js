@@ -105,7 +105,7 @@ export default async (req, res) => {
       }
 
       const getPlayers = (team) => {
-        if (!team?.Players) return { starting: [], substitutes: [], formation: team?.Formation || '' }
+        if (!team?.Players || team.Players.length === 0) return { starting: [], substitutes: [], formation: team?.Formation || '', isSquad: false }
         const all = team.Players.map(p => ({
           name: getPlayerName(p),
           shirt: p.ShirtNumber || '',
@@ -113,10 +113,21 @@ export default async (req, res) => {
           captain: p.Captain || false,
           fieldStatus: p.FieldStatus || 0
         }))
+        const hasFieldStatus = all.some(p => p.fieldStatus === 1)
+        if (hasFieldStatus) {
+          return {
+            starting: all.filter(p => p.fieldStatus === 1).sort((a, b) => (a.position || '').localeCompare(b.position || '')),
+            substitutes: all.filter(p => p.fieldStatus !== 1),
+            formation: team.Formation || '',
+            isSquad: false
+          }
+        }
+        // For finished matches, FIFA clears FieldStatus - show all as squad
         return {
-          starting: all.filter(p => p.fieldStatus === 1).sort((a, b) => (a.position || '').localeCompare(b.position || '')),
-          substitutes: all.filter(p => p.fieldStatus !== 1),
-          formation: team.Formation || ''
+          starting: all.sort((a, b) => (a.position || '').localeCompare(b.position || '')),
+          substitutes: [],
+          formation: team.Formation || '',
+          isSquad: true
         }
       }
 
