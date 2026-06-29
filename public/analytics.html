@@ -6,6 +6,7 @@
 <title>Copa 2026 • Central Analítica Premium</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
 :root {
   --bg: #080c12; --bg2: #0d1219; --card: #111820; --card2: #151e28;
@@ -455,26 +456,22 @@ async function exportChart(canvasId,filename){
 async function exportTable(tableId,filename){
   const table=document.getElementById(tableId);if(!table)return;
   try{
-    const clone=table.cloneNode(true);clone.style.position='absolute';clone.style.left='-9999px';clone.style.background=getComputedStyle(document.body).getPropertyValue('--card').trim();clone.style.color=getComputedStyle(document.body).getPropertyValue('--text').trim();clone.style.fontFamily='Inter,system-ui,sans-serif';clone.style.fontSize='12px';document.body.appendChild(clone);
-    const rect=clone.getBoundingClientRect();
-    const canvas=document.createElement('canvas');canvas.width=rect.width*2;canvas.height=rect.height*2;
-    const ctx=canvas.getContext('2d');ctx.scale(2,2);
-    // simple text render fallback - for full table export use html2canvas approach
-    clone.remove();showToast('📥 Tabela salva como print da tela','info',2000);
-    // actual: scroll to table and print area
-    const dataUrl=await html2canvasSimple(clone,rect,canvas,ctx);
-  }catch(e){showToast('Use o print do navegador (Ctrl+P) para exportar','info',3000)}
+    showToast('🔄 Gerando imagem...','info',1000);
+    const bg=getComputedStyle(document.body).getPropertyValue('--card').trim()||'#111820';
+    const canvas=await html2canvas(table,{backgroundColor:bg,scale:2,useCORS:true,logging:false});
+    const link=document.createElement('a');link.download=`copa2026-${filename}.png`;link.href=canvas.toDataURL('image/png');link.click();
+    showToast('📥 Tabela exportada!','success',2000)
+  }catch(e){showToast('Use Win+Shift+S para recortar','info',4000)}
 }
-function exportElement(el,filename){
+async function exportElement(el,filename){
   if(!el)return;
   try{
-    const rect=el.getBoundingClientRect();const c=document.createElement('canvas');c.width=rect.width*2;c.height=rect.height*2;
-    const ctx=c.getContext('2d');ctx.scale(2,2);
-    const bg=getComputedStyle(document.body).getPropertyValue('--card').trim();ctx.fillStyle=bg;ctx.fillRect(0,0,rect.width,rect.height);
-    const link=document.createElement('a');link.download=`copa2026-${filename}.png`;
-    // Prompt user to screenshot
-    showToast('💡 Dica: use Win+Shift+S para recortar esta área','info',4000);
-  }catch(e){showToast('Use o print do navegador para exportar','info',3000)}
+    showToast('🔄 Gerando imagem...','info',1000);
+    const bg=getComputedStyle(document.body).getPropertyValue('--card').trim()||'#111820';
+    const canvas=await html2canvas(el,{backgroundColor:bg,scale:2,useCORS:true,logging:false});
+    const link=document.createElement('a');link.download=`copa2026-${filename}.png`;link.href=canvas.toDataURL('image/png');link.click();
+    showToast('📥 Exportado!','success',2000)
+  }catch(e){showToast('Use Win+Shift+S para recortar','info',4000)}
 }
 
 function toggleTheme(){const h=document.documentElement;const dk=h.dataset.theme==='dark';h.dataset.theme=dk?'light':'dark';document.querySelector('.theme-toggle').textContent=dk?'☀️':'🌙';setTimeout(()=>{if(typeof Chart!=='undefined')Chart.helpers.each(Chart.instances,c=>{c.destroy()});if(EMBEDDED)init(EMBEDDED)},100)}

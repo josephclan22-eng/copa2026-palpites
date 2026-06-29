@@ -87,6 +87,6 @@ app.get('/api/health', (req, res) => {
 })
 
 syncFifa()
-setInterval(syncFifa, 2000)
+setInterval(syncFifa, 30000)
 
 app.listen(PORT, () => console.log(`Sync server on port ${PORT}`))

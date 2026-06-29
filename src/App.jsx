@@ -159,10 +159,15 @@ function App() {
     }
   }, [matchResults]);
 
+  const syncRef = useRef();
   const handleSyncResults = useCallback(async () => {
     setSyncState(s => ({ ...s, syncing: true, error: null }));
     try {
-      await fetch('/api/sync-fifa').catch(() => {});
+      const syncRes = await fetch('/api/sync-fifa');
+      if (!syncRes.ok) {
+        setSyncState(s => ({ ...s, syncing: false, error: 'Sync retornou ' + syncRes.status }));
+        return;
+      }
       const { data } = await supabase.from('match_results').select('*');
       if (data) {
         const results = {};
@@ -177,21 +182,17 @@ function App() {
       }
       recalculateAllPoints();
       setSyncState({ syncing: false, lastSync: new Date().toISOString(), error: null });
-    } catch {
-      setSyncState(s => ({ ...s, syncing: false, error: 'Erro ao carregar resultados' }));
+    } catch (err) {
+      setSyncState(s => ({ ...s, syncing: false, error: err.message }));
     }
+  }, [matchResults, recalculateAllPoints]);
+  syncRef.current = handleSyncResults;
+
+  useEffect(() => {
+    syncRef.current();
+    const interval = setInterval(() => syncRef.current(), 30000);
+    return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    handleSyncResults();
-    const interval = setInterval(handleSyncResults, 2000);
-    return () => clearInterval(interval);
-  }, [handleSyncResults]);
-
-  useEffect(() => {
-    const interval = setInterval(recalculateAllPoints, 2000);
-    return () => clearInterval(interval);
-  }, [recalculateAllPoints]);
 
   const effectiveTab = !canViewAdmin && tab === 'admin' ? 'dashboard' : tab;
 
