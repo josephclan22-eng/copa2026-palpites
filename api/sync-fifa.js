@@ -189,7 +189,7 @@ export default async (req, res) => {
         away_score: hasScore ? Number(fm.AwayTeamScore) : null,
         match_status: isNaN(ms) ? 1 : ms,
         match_time: fm.MatchTime || '',
-        played: ms === 0,
+        played: hasScore,
         updated_at: new Date().toISOString(),
       })
     }
