@@ -72,10 +72,11 @@ function resolveTeam(teamPlaceholder, standings, bestThird, matches, matchResult
   if (teamPlaceholder.startsWith('W') || teamPlaceholder.startsWith('L')) {
     const matchId = parseInt(teamPlaceholder.slice(1));
     const match = matches.find(m => m.id === matchId);
-    if (!match || !matchResults[matchId]?.played) return null;
     const r = matchResults[matchId];
+    if (!match || !r) return null;
     const hs = Number(r.homeScore);
     const as = Number(r.awayScore);
+    if (isNaN(hs) || isNaN(as)) return null;
     if (teamPlaceholder.startsWith('W')) {
       if (hs > as) return match.homeTeam;
       if (as > hs) return match.awayTeam;
